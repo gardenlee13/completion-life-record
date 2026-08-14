@@ -1,0 +1,4284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>하루하루의 기록</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --bg-card: #141c2e;
+      --bg-elevated: #1a2438;
+      --bg-press: #222d44;
+      --line: rgba(255, 255, 255, 0.06);
+      --line-strong: rgba(255, 255, 255, 0.12);
+      --text: #f7f9fc;
+      --text-sub: #8b97ad;
+      --text-hint: #5e6b82;
+      --blue: #3182f6;
+      --blue-soft: rgba(49, 130, 246, 0.16);
+      --blue-press: #1b64da;
+      --green: #03b26c;
+      --green-soft: rgba(3, 178, 108, 0.14);
+      --red: #f04452;
+      --red-soft: rgba(240, 68, 82, 0.14);
+      --amber: #ffb020;
+      --pink: #f0449a;
+      --en: #3182f6;
+      --cn: #ffb020;
+      --jp: #03b26c;
+      --ex: #f0449a;
+      --lang: #3182f6;
+      --book: #03b26c;
+      --place: #ffb020;
+      --movie: #a78bfa;
+      --radius: 18px;
+      --radius-sm: 14px;
+      --tab-h: 58px;
+      --safe-t: env(safe-area-inset-top, 0px);
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --safe-l: env(safe-area-inset-left, 0px);
+      --safe-r: env(safe-area-inset-right, 0px);
+      --page-x: 14px;
+      --font: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+      --touch: 48px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      height: 100%;
+      width: 100%;
+    }
+    body {
+      min-height: 100%;
+      min-height: 100dvh;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background:
+        radial-gradient(ellipse 90% 55% at 50% -20%, rgba(49, 130, 246, 0.18), transparent 55%),
+        radial-gradient(ellipse 50% 35% at 100% 10%, rgba(3, 178, 108, 0.08), transparent),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.02em;
+      overflow-x: hidden;
+      overscroll-behavior-y: contain;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    button, input { font: inherit; color: inherit; }
+    button {
+      border: none;
+      background: none;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+    .app {
+      width: 100%;
+      max-width: 430px;
+      margin-left: auto;
+      margin-right: auto;
+      min-height: 100dvh;
+      padding:
+        calc(10px + var(--safe-t))
+        max(var(--page-x), var(--safe-r))
+        calc(var(--tab-h) + var(--safe-b) + 16px)
+        max(var(--page-x), var(--safe-l));
+      box-sizing: border-box;
+    }
+
+    /* Header */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0 14px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: linear-gradient(180deg, var(--bg) 60%, transparent);
+      margin: 0 calc(-1 * max(var(--page-x), var(--safe-l))) 0 calc(-1 * max(var(--page-x), var(--safe-r)));
+      padding-left: max(var(--page-x), var(--safe-l));
+      padding-right: max(var(--page-x), var(--safe-r));
+    }
+    .brand-kicker {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--blue);
+      letter-spacing: 0.06em;
+    }
+    .brand-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.2;
+      margin-top: 2px;
+    }
+    .icon-btn {
+      width: var(--touch);
+      height: var(--touch);
+      border-radius: 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      transition: transform 0.12s var(--ease), background 0.15s;
+      flex-shrink: 0;
+    }
+    .icon-btn:active { transform: scale(0.94); background: var(--bg-press); }
+
+    .panel { display: none; animation: rise 0.28s var(--ease); }
+    .panel.active { display: block; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    @keyframes pop {
+      0% { transform: scale(1); }
+      40% { transform: scale(0.96); }
+      100% { transform: scale(1); }
+    }
+    @keyframes pulseSoft {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(49, 130, 246, 0); }
+      50% { box-shadow: 0 0 0 6px rgba(49, 130, 246, 0.12); }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px 14px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
+    }
+    .card-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .card-head h2 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+    .card-head .sub {
+      font-size: 13px;
+      color: var(--text-sub);
+      font-weight: 500;
+    }
+
+    /* Today hero */
+    .today-hero {
+      background:
+        linear-gradient(160deg, rgba(49, 130, 246, 0.22), transparent 55%),
+        var(--bg-card);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      padding: 16px 14px 14px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
+    }
+    .today-date {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-bottom: 4px;
+    }
+    .today-score {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .today-score strong {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+    .today-score span {
+      font-size: 14px;
+      color: var(--text-sub);
+      font-weight: 600;
+      padding-bottom: 3px;
+    }
+    .habit-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    #exerciseHabitStrip .habit-pill .name { font-size: 10px; letter-spacing: -0.04em; }
+    #exerciseHabitStrip .habit-pill { min-height: 70px; }
+    .habit-pill {
+      border-radius: 12px;
+      padding: 10px 4px 8px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line);
+      transition: border-color 0.2s, background 0.2s, transform 0.15s var(--ease);
+      min-height: 64px;
+    }
+    .habit-pill.done {
+      background: var(--blue-soft);
+      border-color: rgba(49, 130, 246, 0.35);
+    }
+    .habit-pill .mark {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin: 0 auto 8px;
+      background: var(--text-hint);
+      opacity: 0.45;
+    }
+    .habit-pill.done .mark { opacity: 1; }
+    .habit-pill.en.done .mark, .habit-pill.en .mark.live { background: var(--en); }
+    .habit-pill.cn.done .mark, .habit-pill.cn .mark.live { background: var(--cn); }
+    .habit-pill.jp.done .mark, .habit-pill.jp .mark.live { background: var(--jp); }
+    .habit-pill.ex.done .mark, .habit-pill.ex .mark.live { background: var(--ex); }
+    .habit-pill.lang.done .mark, .habit-pill.lang .mark.live { background: var(--lang); }
+    .habit-pill.book.done .mark, .habit-pill.book .mark.live { background: var(--book); }
+    .habit-pill.place.done .mark, .habit-pill.place .mark.live { background: var(--place); }
+    .habit-pill.movie.done .mark, .habit-pill.movie .mark.live { background: var(--movie); }
+    .habit-pill.push.done .mark, .habit-pill.push .mark.live { background: #f0449a; }
+    .habit-pill.squat.done .mark, .habit-pill.squat .mark.live { background: #ff7ab8; }
+    .habit-pill.run.done .mark, .habit-pill.run .mark.live { background: #c084fc; }
+    .habit-pill.box.done .mark, .habit-pill.box .mark.live { background: #fb7185; }
+    .habit-pill .name {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-sub);
+    }
+    .habit-pill.done .name { color: var(--text); }
+    .habit-pill .mins {
+      margin-top: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-hint);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .habit-pill.done .mins { color: var(--blue); }
+
+    /* Gauges */
+    .gauge { margin-bottom: 14px; }
+    .gauge:last-child { margin-bottom: 0; }
+    .gauge-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .gauge-meta .label { font-size: 14px; font-weight: 600; }
+    .gauge-meta .values {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+    .gauge-meta .pct { color: var(--blue); margin-left: 4px; }
+    .bar {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+    .bar > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #1b64da, #3182f6);
+      transition: width 0.45s var(--ease);
+    }
+    .bar.books > i { background: linear-gradient(90deg, #029459, #03b26c); }
+
+    /* Routine logger — Toss stepper */
+    .routine-list { display: flex; flex-direction: column; gap: 8px; }
+    .routine-item {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      transition: border-color 0.2s, transform 0.15s var(--ease);
+    }
+    .routine-item.flash { animation: pulseSoft 0.55s var(--ease); border-color: rgba(49, 130, 246, 0.45); }
+    .routine-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+    .routine-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .routine-label .swatch {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .routine-label .swatch.en { background: var(--en); }
+    .routine-label .swatch.cn { background: var(--cn); }
+    .routine-label .swatch.jp { background: var(--jp); }
+    .routine-label .swatch.ex { background: var(--ex); }
+    .routine-label .swatch.push { background: #f0449a; }
+    .routine-label .swatch.squat { background: #ff7ab8; }
+    .routine-label .swatch.run { background: #c084fc; }
+    .routine-label .swatch.box { background: #fb7185; }
+    .today-badge {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-sub);
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 999px;
+      padding: 6px 10px;
+      white-space: nowrap;
+    }
+    .today-badge.has { color: var(--blue); background: var(--blue-soft); }
+
+    .stepper {
+      display: grid;
+      grid-template-columns: var(--touch) 1fr var(--touch);
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .step-btn {
+      width: var(--touch);
+      height: var(--touch);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--line-strong);
+      font-size: 26px;
+      font-weight: 500;
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      transition: background 0.12s, transform 0.1s var(--ease);
+      user-select: none;
+    }
+    .step-btn:active { transform: scale(0.92); background: var(--bg-press); animation: pop 0.2s var(--ease); }
+    .step-btn:disabled { opacity: 0.35; }
+    .step-value {
+      text-align: center;
+      min-height: var(--touch);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-radius: 14px;
+      background: rgba(49, 130, 246, 0.08);
+      border: 1px solid rgba(49, 130, 246, 0.2);
+      padding: 4px;
+    }
+    .step-value strong {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+    }
+    .step-value em {
+      font-style: normal;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    .preset-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .preset {
+      min-height: 44px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      transition: all 0.12s var(--ease);
+      padding: 0 2px;
+    }
+    .preset:active { transform: scale(0.96); }
+    .preset.active {
+      color: var(--blue);
+      background: var(--blue-soft);
+      border-color: rgba(49, 130, 246, 0.4);
+    }
+
+    .btn-commit {
+      width: 100%;
+      min-height: var(--touch);
+      border-radius: 14px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      transition: background 0.12s, transform 0.1s var(--ease);
+      box-shadow: 0 6px 16px rgba(49, 130, 246, 0.28);
+    }
+    .btn-commit:active { transform: scale(0.98); background: var(--blue-press); }
+    .btn-commit:disabled {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-hint);
+      box-shadow: none;
+    }
+
+    /* Instant add hint */
+    .instant-hint {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-hint);
+      font-weight: 500;
+    }
+
+    /* Calendar */
+    .cal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      gap: 6px;
+    }
+    .cal-nav strong {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      flex: 1;
+      text-align: center;
+    }
+    .cal-today-btn {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--blue);
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      margin-bottom: 10px;
+      display: inline-flex;
+    }
+    .nav-circle {
+      width: var(--touch);
+      height: var(--touch);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      color: var(--text-sub);
+      font-size: 20px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .nav-circle:active { background: var(--bg-press); }
+    .cal-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+    .cal-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot.en { background: var(--en); }
+    .dot.cn { background: var(--cn); }
+    .dot.jp { background: var(--jp); }
+    .dot.ex { background: var(--ex); }
+    .dot.lang { background: var(--lang); }
+    .dot.book { background: var(--book); }
+    .dot.place { background: var(--place); }
+    .dot.movie { background: var(--movie); }
+    .cal-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 6px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-hint);
+    }
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .cal-cell {
+      aspect-ratio: 1;
+      min-height: 42px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 4px 1px 3px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.12s var(--ease);
+      border: none;
+      color: inherit;
+      width: 100%;
+    }
+    .cal-cell:not(.empty):active { transform: scale(0.96); }
+    .cal-cell.empty { background: transparent; cursor: default; pointer-events: none; }
+    .cal-cell.today {
+      background: var(--blue-soft);
+      box-shadow: inset 0 0 0 1.5px rgba(49, 130, 246, 0.5);
+    }
+    .cal-cell.selected {
+      background: rgba(49, 130, 246, 0.28);
+      box-shadow: inset 0 0 0 1.5px var(--blue);
+    }
+    .cal-cell .day-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-hint);
+      line-height: 1.2;
+    }
+    .cal-cell.today .day-num { color: var(--blue); }
+    .cal-cell .marks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      margin-top: auto;
+    }
+    .cal-cell .marks.five {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .cal-cell .marks i {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      display: block;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .cal-cell .marks i.on.en { background: var(--en); }
+    .cal-cell .marks i.on.cn { background: var(--cn); }
+    .cal-cell .marks i.on.jp { background: var(--jp); }
+    .cal-cell .marks i.on.ex { background: var(--ex); }
+    .cal-cell .marks i.on.lang { background: var(--lang); }
+    .cal-cell .marks i.on.book { background: var(--book); }
+    .cal-cell .marks i.on.place { background: var(--place); }
+    .cal-cell .marks i.on.movie { background: var(--movie); }
+
+    /* Finance / Experience / Settings shared */
+    .field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-sub); margin-bottom: 12px; }
+    .field-row { margin-bottom: 4px; }
+    .field-row.two {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    @media (min-width: 400px) {
+      .field-row.two { grid-template-columns: 1fr 1fr; gap: 10px; }
+    }
+    input[type="number"], input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--line-strong);
+      border-radius: 14px;
+      padding: 14px;
+      min-height: var(--touch);
+      outline: none;
+      font-size: 16px; /* iOS 줌 방지 */
+      font-weight: 600;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input:focus { border-color: var(--blue); }
+    input::placeholder { color: var(--text-hint); font-weight: 500; }
+
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .summary-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+    .summary-grid.four {
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    @media (min-width: 400px) {
+      .summary-grid.four { grid-template-columns: repeat(4, 1fr); }
+    }
+    .summary-tile.loan { background: rgba(255, 176, 32, 0.12); border-color: rgba(255, 176, 32, 0.3); }
+    .summary-tile.loan .v { color: var(--amber); }
+    .summary-tile {
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+    }
+    .summary-tile.income { background: var(--green-soft); border-color: rgba(3, 178, 108, 0.25); }
+    .summary-tile.expense { background: var(--red-soft); border-color: rgba(240, 68, 82, 0.25); }
+    .summary-tile.transfer { background: rgba(49, 130, 246, 0.1); border-color: rgba(49, 130, 246, 0.22); }
+    .summary-tile .k { font-size: 11px; color: var(--text-sub); font-weight: 600; margin-bottom: 4px; }
+    .summary-tile .v { font-size: 15px; font-weight: 800; letter-spacing: -0.03em; word-break: break-all; }
+    .summary-tile.income .v { color: var(--green); }
+    .summary-tile.expense .v { color: var(--red); }
+    .summary-tile.transfer .v { color: var(--blue); }
+
+    .ledger-hero {
+      border-radius: var(--radius);
+      padding: 18px 16px 16px;
+      margin-bottom: 10px;
+      background:
+        linear-gradient(160deg, rgba(240, 68, 82, 0.18), transparent 55%),
+        var(--bg-card);
+      border: 1px solid var(--line-strong);
+      box-shadow: var(--shadow);
+    }
+    .ledger-hero .label { font-size: 13px; font-weight: 700; color: var(--text-sub); }
+    .ledger-hero .big {
+      margin-top: 6px;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--red);
+    }
+    .ledger-hero .big.plus { color: var(--green); }
+    .ledger-hero .subline {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-hint);
+      font-weight: 600;
+    }
+
+    .ledger-filters {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .ledger-filters button {
+      min-height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-hint);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .ledger-filters button.active {
+      background: var(--blue-soft);
+      border-color: rgba(49, 130, 246, 0.45);
+      color: var(--blue);
+    }
+    .ledger-filters button.loan-tab {
+      font-size: 11px;
+      color: var(--amber);
+      border-color: rgba(255, 176, 32, 0.28);
+      background: rgba(255, 176, 32, 0.1);
+    }
+    .ledger-filters button.loan-tab:active {
+      background: rgba(255, 176, 32, 0.18);
+    }
+    .ledger-filters button.loan-tab:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .loan-hero {
+      border-radius: var(--radius);
+      padding: 18px 16px 16px;
+      margin-bottom: 12px;
+      background:
+        linear-gradient(160deg, rgba(255, 176, 32, 0.18), transparent 55%),
+        var(--bg-card);
+      border: 1px solid rgba(255, 176, 32, 0.28);
+      box-shadow: var(--shadow);
+    }
+    .loan-hero .label { font-size: 13px; font-weight: 700; color: var(--text-sub); }
+    .loan-hero .big {
+      margin-top: 6px;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--amber);
+    }
+    .loan-hero .subline {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-hint);
+      font-weight: 600;
+      line-height: 1.45;
+    }
+    .loan-summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .loan-summary-grid .summary-tile.loan { grid-column: 1 / -1; }
+    .loan-group { margin-bottom: 14px; }
+    .loan-group:last-child { margin-bottom: 0; }
+    .loan-group-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-sub);
+    }
+    .loan-group-head .amt { color: var(--amber); font-size: 13px; }
+    .loan-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 10px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line);
+      margin-bottom: 6px;
+    }
+    .loan-row .name {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.35;
+    }
+    .loan-row .balance {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--amber);
+      white-space: nowrap;
+      text-align: right;
+    }
+    .loan-row .meta {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      font-size: 11px;
+      color: var(--text-hint);
+      font-weight: 600;
+    }
+    .loan-row .meta span {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--line);
+    }
+    .loan-row .track-wrap {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 4px;
+    }
+    .loan-row .track-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-hint);
+      font-weight: 600;
+    }
+    .loan-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+    .loan-track > i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--amber), #ff8c00);
+    }
+    .loan-sheet-panel { max-height: min(88vh, 720px); }
+
+    .cat-bars { display: flex; flex-direction: column; gap: 10px; }
+    .cat-bar-row {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+      text-align: left;
+      padding: 8px;
+      margin: 0 -8px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .cat-bar-row:active { transform: scale(0.99); }
+    .cat-bar-row.active {
+      background: var(--blue-soft);
+      border-color: rgba(49, 130, 246, 0.4);
+    }
+    .cat-bar-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .cat-bar-top .amt { color: var(--text-sub); font-weight: 600; font-size: 12px; }
+    .cat-track {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+    .cat-track > i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--blue);
+    }
+    .cat-filter-chip {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--blue-soft);
+      border: 1px solid rgba(49, 130, 246, 0.35);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--blue);
+    }
+    .cat-filter-chip.show { display: flex; }
+    .cat-filter-chip button {
+      color: var(--text-sub);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .ledger-tx {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line);
+      margin-bottom: 6px;
+    }
+    .ledger-tx .title { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; }
+    .ledger-tx .meta { margin-top: 3px; font-size: 11px; color: var(--text-hint); font-weight: 500; line-height: 1.35; }
+    .ledger-tx .amt { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+    .ledger-tx .amt.out { color: var(--text); }
+    .ledger-tx .amt.in { color: var(--green); }
+    .ledger-tx .amt.move { color: var(--blue); }
+    .ledger-tx .cat-select {
+      margin-top: 8px;
+      width: 100%;
+      max-width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 10px;
+      min-height: 36px;
+    }
+    .ledger-day { margin-bottom: 14px; }
+    .ledger-day-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+      padding: 0 2px;
+    }
+    .ledger-day-head strong { font-size: 14px; font-weight: 800; }
+    .ledger-day-head span { font-size: 12px; color: var(--text-hint); font-weight: 600; }
+    .ledger-status {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-hint);
+      font-weight: 600;
+      padding: 20px 8px;
+    }
+
+    .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .type-toggle button {
+      min-height: var(--touch);
+      border-radius: 14px;
+      border: 1px solid var(--line-strong);
+      background: rgba(255, 255, 255, 0.03);
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--text-sub);
+    }
+    .type-toggle button.active.income { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+    .type-toggle button.active.expense { background: var(--red-soft); border-color: var(--red); color: var(--red); }
+
+    .btn-primary {
+      width: 100%;
+      min-height: var(--touch);
+      border-radius: 14px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      box-shadow: 0 6px 16px rgba(49, 130, 246, 0.28);
+      transition: transform 0.1s var(--ease), background 0.12s;
+    }
+    .btn-primary:active { transform: scale(0.98); background: var(--blue-press); }
+    .btn-ghost-wide {
+      width: 100%;
+      min-height: var(--touch);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line-strong);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .btn-ghost-wide:active { background: var(--bg-press); }
+
+    .month-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .month-nav strong { font-size: 16px; font-weight: 700; }
+
+    .timeline { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .timeline li {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+    .timeline .title { font-size: 15px; font-weight: 700; word-break: break-word; }
+    .timeline .meta { font-size: 12px; color: var(--text-sub); margin-top: 4px; font-weight: 500; display: flex; flex-wrap: wrap; gap: 4px; }
+    .timeline .amount { font-size: 15px; font-weight: 800; }
+    .timeline .amount.plus { color: var(--green); }
+    .timeline .amount.minus { color: var(--red); }
+    .timeline .del {
+      grid-column: 1 / -1;
+      justify-self: end;
+      color: var(--text-hint);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 0;
+    }
+    .empty { text-align: center; color: var(--text-hint); font-size: 14px; font-weight: 500; padding: 28px 12px; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--tab-h) + var(--safe-b) + 12px);
+      transform: translateX(-50%) translateY(16px);
+      background: #191f28;
+      color: #fff;
+      padding: 13px 18px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+      z-index: 60;
+      max-width: min(360px, calc(100% - 28px));
+      text-align: center;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    nav.tabbar {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 430px;
+      height: calc(var(--tab-h) + var(--safe-b));
+      padding: 4px 4px var(--safe-b);
+      background: rgba(11, 18, 32, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      z-index: 40;
+      box-sizing: border-box;
+    }
+    nav.tabbar button {
+      color: var(--text-hint);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 8px;
+      font-weight: 600;
+      border-radius: 10px;
+      min-height: 50px;
+      transition: color 0.15s, background 0.15s;
+      padding: 0 0;
+    }
+    nav.tabbar button .ico { font-size: 15px; line-height: 1; }
+    nav.tabbar button.active {
+      color: var(--blue);
+      background: var(--blue-soft);
+      font-weight: 800;
+    }
+
+    .settings-grid { display: grid; gap: 4px; }
+    .muted-note {
+      font-size: 13px;
+      color: var(--text-sub);
+      line-height: 1.55;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+
+    /* 작은 폰 (SE / 미니) + 모바일 경험 탭 */
+    @media (max-width: 430px) {
+      .exp-hero-title { font-size: 20px; }
+      .exp-hero-sub { font-size: 12px; margin-bottom: 12px; }
+      .category-pills button { min-height: 48px; font-size: 11px; }
+      .search-results {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px 6px;
+        max-height: min(52vh, 380px);
+      }
+      .result-card .info { padding: 6px 6px 8px; }
+      .result-card .info strong { font-size: 11px; }
+      .shelf-grid { grid-template-columns: repeat(3, 1fr); gap: 8px 6px; }
+      #placeMap { height: 220px; }
+      .view-tabs button { min-height: 38px; font-size: 11px; padding: 0 4px; }
+    }
+    @media (max-width: 374px) {
+      :root { --page-x: 12px; --touch: 46px; }
+      .brand-title { font-size: 19px; }
+      .habit-pill .name { font-size: 10px; }
+      .habit-pill .mins { font-size: 9px; }
+      .step-value strong { font-size: 20px; }
+      .preset { font-size: 12px; min-height: 42px; }
+      .cal-cell { min-height: 38px; }
+      .search-results { grid-template-columns: repeat(2, 1fr); max-height: min(48vh, 340px); }
+      .shelf-grid { grid-template-columns: repeat(2, 1fr); }
+      .kind-chips button { min-height: 34px; font-size: 12px; padding: 0 12px; }
+    }
+
+    .search-hint {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-hint);
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    /* 키보드 올라올 때 탭바 가림 완화: 입력 포커스 시 하단 여유 */
+    .app.kb-open {
+      padding-bottom: calc(var(--tab-h) + var(--safe-b) + 120px);
+    }
+    body.kb-open nav.tabbar {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-50%) translateY(100%);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    /* Experience: search + shelf + map */
+    .category-pills {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0;
+      padding: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      border: 1px solid var(--line);
+    }
+    .category-pills button {
+      min-height: 54px;
+      border-radius: 11px;
+      border: none;
+      background: transparent;
+      font-weight: 700;
+      font-size: 12px;
+      line-height: 1.3;
+      color: var(--text-sub);
+      transition: background 0.15s, color 0.15s;
+    }
+    .category-pills button .cat-ico { display: block; font-size: 16px; margin-bottom: 2px; }
+    .category-pills button.active {
+      background: #fff;
+      color: #191f28;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .kind-chips {
+      display: none;
+      gap: 8px;
+      margin: 0 0 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .kind-chips.show { display: flex; }
+    .kind-chips::-webkit-scrollbar { display: none; }
+    .kind-chips button {
+      flex: 0 0 auto;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line-strong);
+    }
+    .kind-chips button.active {
+      color: #fff;
+      background: var(--blue);
+      border-color: var(--blue);
+    }
+
+    .exp-hero-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      margin-bottom: 4px;
+    }
+    .exp-hero-sub {
+      font-size: 13px;
+      color: var(--text-sub);
+      font-weight: 500;
+      margin-bottom: 14px;
+      line-height: 1.45;
+    }
+
+    .search-shell {
+      background: var(--bg);
+      border: 1.5px solid var(--line-strong);
+      border-radius: 16px;
+      padding: 4px 4px 4px 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-shell:focus-within {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.18);
+    }
+    .search-shell input {
+      border: none !important;
+      background: transparent !important;
+      min-height: 44px !important;
+      padding: 0 !important;
+      font-size: 16px;
+      font-weight: 600;
+      width: 100%;
+    }
+    .search-shell .btn-search {
+      min-width: 64px;
+      min-height: 40px;
+      border-radius: 12px;
+      background: var(--blue);
+      border: none;
+      color: #fff;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 0 14px;
+      box-shadow: 0 4px 12px rgba(49, 130, 246, 0.28);
+    }
+    .search-shell .btn-search:disabled { opacity: 0.45; box-shadow: none; }
+
+    .search-results {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px 8px;
+      margin-top: 14px;
+      max-height: 340px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 2px;
+    }
+    .search-results.place-mode {
+      grid-template-columns: 1fr;
+      max-height: 240px;
+    }
+    .result-card {
+      background: var(--bg-elevated);
+      border: 2px solid transparent;
+      border-radius: 14px;
+      overflow: hidden;
+      text-align: left;
+      padding: 0;
+      transition: border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+    }
+    .result-card:active { transform: scale(0.97); }
+    .result-card.selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.25);
+    }
+    .result-card .cover {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      background: linear-gradient(160deg, #243049, #0a1020);
+      display: block;
+    }
+    .result-card .cover.placeholder {
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      color: var(--text-hint);
+      aspect-ratio: 2 / 3;
+    }
+    .result-card .info { padding: 8px 8px 10px; }
+    .result-card .info strong {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+    .result-card .info span {
+      display: block;
+      margin-top: 3px;
+      font-size: 10px;
+      color: var(--text-hint);
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .place-result {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px;
+      width: 100%;
+    }
+    .place-result .pin {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      font-size: 16px;
+    }
+    .place-result strong {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .place-result span {
+      display: block;
+      margin-top: 3px;
+      font-size: 12px;
+      color: var(--text-sub);
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .selected-chip {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(49, 130, 246, 0.18), rgba(49, 130, 246, 0.06));
+      border: 1px solid rgba(49, 130, 246, 0.35);
+    }
+    .selected-chip.show { display: flex; }
+    .selected-chip img {
+      width: 48px;
+      height: 68px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #0a1020;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .selected-chip .meta { flex: 1; min-width: 0; }
+    .selected-chip .meta em {
+      display: block;
+      font-style: normal;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--blue);
+      margin-bottom: 2px;
+    }
+    .selected-chip .meta strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .selected-chip .meta span {
+      font-size: 12px;
+      color: var(--text-sub);
+      font-weight: 500;
+    }
+    .selected-chip .clear {
+      color: var(--text-hint);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px;
+      flex-shrink: 0;
+    }
+
+    .shelf-item .badge-comic {
+      position: absolute;
+      left: 4px;
+      bottom: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      background: rgba(240, 68, 154, 0.92);
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 6px;
+      z-index: 2;
+    }
+
+    .shelf-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px 8px;
+    }
+    .shelf-item {
+      position: relative;
+      border: none;
+      background: transparent;
+      padding: 0;
+      text-align: left;
+    }
+    .shelf-item .cover-wrap {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+      background: linear-gradient(160deg, #1a2438, #0a1020);
+      aspect-ratio: 2 / 3;
+    }
+    .shelf-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .shelf-item .cover-fallback {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      color: var(--text-hint);
+    }
+    .shelf-item .caption {
+      margin-top: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .shelf-item .sub {
+      font-size: 10px;
+      color: var(--text-hint);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .shelf-item .del-x {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font-size: 12px;
+      display: grid;
+      place-items: center;
+      z-index: 2;
+    }
+
+    #placeMap {
+      width: 100%;
+      height: 260px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: #0a1020;
+      z-index: 1;
+    }
+    .place-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .place-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 12px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      align-items: start;
+    }
+    .place-row .title { font-size: 14px; font-weight: 700; }
+    .place-row .meta { font-size: 12px; color: var(--text-sub); margin-top: 3px; font-weight: 500; line-height: 1.35; }
+    .place-row .actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .link-gmaps {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--blue);
+      text-decoration: none;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: var(--blue-soft);
+      white-space: nowrap;
+    }
+    .view-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .view-tabs button {
+      min-height: 40px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-sub);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line);
+    }
+    .view-tabs button.active {
+      color: var(--blue);
+      background: var(--blue-soft);
+      border-color: rgba(49, 130, 246, 0.35);
+    }
+    .exp-pane { display: none; }
+    .exp-pane.active { display: block; }
+    .leaflet-container { font: inherit; }
+    .search-status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-hint);
+      font-weight: 600;
+      text-align: center;
+    }
+
+    /* Day detail sheet */
+    .day-sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .day-sheet.open { display: flex; }
+    .day-sheet-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+    }
+    .day-sheet-panel {
+      position: relative;
+      width: 100%;
+      max-width: 430px;
+      max-height: min(78vh, 640px);
+      overflow: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--line-strong);
+      border-radius: 22px 22px 0 0;
+      padding: 16px 16px calc(18px + var(--safe-b));
+      box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+      animation: sheetUp 0.28s var(--ease);
+    }
+    @keyframes sheetUp {
+      from { transform: translateY(24px); opacity: 0.6; }
+      to { transform: none; opacity: 1; }
+    }
+    .day-sheet-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .day-sheet-head strong {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .day-sheet-head .close {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-sub);
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .day-section { margin-bottom: 14px; }
+    .day-section h3 {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-sub);
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+    .day-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line);
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .day-row .meta {
+      color: var(--text-hint);
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 3px;
+    }
+    .day-row .val { color: var(--blue); font-weight: 800; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <div class="brand-kicker">LIFE RECORD</div>
+        <h1 class="brand-title">하루하루의 기록</h1>
+      </div>
+      <button type="button" class="icon-btn" id="btnExport" title="CSV 내보내기" aria-label="CSV 내보내기">📥</button>
+    </header>
+
+    <!-- Dashboard (홈) -->
+    <section class="panel active" id="panel-dashboard" data-panel="dashboard">
+      <div class="today-hero">
+        <div class="today-date" id="todayDateLabel">오늘</div>
+        <div class="today-score">
+          <strong id="todayDoneCount">0</strong>
+          <span>/ 4 완료</span>
+        </div>
+        <div class="habit-strip" id="habitStrip"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>루틴 달력</h2>
+          <span class="sub">한눈에 보기</span>
+        </div>
+        <div class="cal-nav">
+          <button type="button" class="nav-circle" id="btnPrevCal" aria-label="이전 달">‹</button>
+          <strong id="calMonthLabel">2026년 8월</strong>
+          <button type="button" class="nav-circle" id="btnNextCal" aria-label="다음 달">›</button>
+        </div>
+        <button type="button" class="cal-today-btn" id="btnTodayCal">오늘로 이동</button>
+        <div class="cal-legend">
+          <span><i class="dot lang"></i>어학</span>
+          <span><i class="dot ex"></i>운동</span>
+          <span><i class="dot book"></i>독서</span>
+          <span><i class="dot place"></i>여행</span>
+        </div>
+        <div class="cal-weekdays">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="cal-grid" id="calGrid" aria-label="루틴 달력"></div>
+        <p class="instant-hint" style="margin-top:10px">날짜를 누르면 그날 기록을 볼 수 있어요 · ‹ › 로 과거 달도 확인</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>연간 목표</h2>
+          <span class="sub">실시간</span>
+        </div>
+        <div class="gauge">
+          <div class="gauge-meta">
+            <span class="label">독서</span>
+            <span class="values"><span id="booksCurrent">0</span> / <span id="booksTarget">50</span>권<span class="pct" id="booksPct">0%</span></span>
+          </div>
+          <div class="bar books"><i id="booksBar"></i></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-meta">
+            <span class="label">어학</span>
+            <span class="values"><span id="studyCurrent">0</span> / <span id="studyTarget">300</span>시간<span class="pct" id="studyPct">0%</span></span>
+          </div>
+          <div class="bar study"><i id="studyBar"></i></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Study (어학) -->
+    <section class="panel" id="panel-study" data-panel="study">
+      <div class="card">
+        <div class="exp-hero-title">오늘 어학은 어땠나요?</div>
+        <p class="exp-hero-sub">영어 · 중국어 · 일본어를 15분 단위로 남겨요</p>
+        <div class="routine-list" id="routineList"></div>
+        <p class="instant-hint">±15분 · 프리셋 선택 후 기록하기</p>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>어학 목표</h2>
+          <span class="sub">연간</span>
+        </div>
+        <div class="gauge">
+          <div class="gauge-meta">
+            <span class="label">누적 어학</span>
+            <span class="values"><span id="studyCurrentTab">0</span> / <span id="studyTargetTab">300</span>시간<span class="pct" id="studyPctTab">0%</span></span>
+          </div>
+          <div class="bar study"><i id="studyBarTab"></i></div>
+        </div>
+        <div class="habit-strip" id="studyHabitStrip" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <!-- Exercise (운동) -->
+    <section class="panel" id="panel-exercise" data-panel="exercise">
+      <div class="card">
+        <div class="exp-hero-title">오늘 운동은 어땠나요?</div>
+        <p class="exp-hero-sub">팔굽혀펴기 · 스쿼트 · 달리기 · 복싱을 남겨요</p>
+        <div class="routine-list" id="exerciseList"></div>
+        <p class="instant-hint">±15분 · 프리셋 선택 후 기록하기</p>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>오늘 운동</h2>
+          <span class="sub">종목별</span>
+        </div>
+        <div class="habit-strip" id="exerciseHabitStrip"></div>
+      </div>
+    </section>
+
+    <!-- Reading (독서) -->
+    <section class="panel" id="panel-reading" data-panel="reading">
+      <div class="card">
+        <div class="exp-hero-title" id="expHeroTitle">어떤 책을 다 읽었나요?</div>
+        <p class="exp-hero-sub" id="expHeroSub">한국 도서·만화·콘텐츠를 표지와 함께 남겨요</p>
+
+        <div class="category-pills" id="expCategoryPills" style="margin-bottom:14px">
+          <button type="button" class="active" data-cat="book"><span class="cat-ico">📚</span>도서·만화</button>
+          <button type="button" data-cat="movie"><span class="cat-ico">🎬</span>콘텐츠</button>
+        </div>
+
+        <div class="kind-chips show" id="bookKindChips">
+          <button type="button" class="active" data-kind="all">전체</button>
+          <button type="button" data-kind="book">도서</button>
+          <button type="button" data-kind="comic">만화</button>
+        </div>
+
+        <div id="expSearchBlock">
+          <div class="search-shell">
+            <input type="search" id="expQuery" placeholder="책·만화 제목, 작가" maxlength="80" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+            <button type="button" class="btn-search" id="btnExpSearch">검색</button>
+          </div>
+          <p class="search-hint" id="expSearchHint">예: 사채꾼 우시지마 · 철자가 애매하면 짧은 키워드만 쳐보세요</p>
+          <div class="search-status" id="expSearchStatus"></div>
+          <div class="search-results" id="expSearchResults"></div>
+          <div class="selected-chip" id="expSelectedChip">
+            <img id="expSelectedImg" alt="" />
+            <div class="meta">
+              <em id="expSelectedHint">선택됨</em>
+              <strong id="expSelectedTitle"></strong>
+              <span id="expSelectedSub"></span>
+            </div>
+            <button type="button" class="clear" id="btnClearSelected">취소</button>
+          </div>
+        </div>
+
+        <div class="field-row" id="expManualTitleRow" style="margin-top:12px" hidden>
+          <label class="field"><span id="expTitleLabelText">제목</span>
+            <input type="text" id="expTitle" placeholder="제목 직접 입력" maxlength="100" />
+          </label>
+        </div>
+        <div class="field-row" style="margin-top:4px">
+          <label class="field"><span id="expMemoLabelText">한 줄 소감</span>
+            <input type="text" id="expMemo" placeholder="읽은 느낌을 남겨보세요" maxlength="120" />
+          </label>
+        </div>
+        <button type="button" class="btn-primary" id="btnSaveExp">책장에 꽂기</button>
+      </div>
+
+      <div class="card">
+        <div class="view-tabs" id="expViewTabs">
+          <button type="button" class="active" data-view="books">📚 책장</button>
+          <button type="button" data-view="movies">🎬 콘텐츠</button>
+        </div>
+
+        <div class="exp-pane active" id="pane-books">
+          <div class="card-head" style="margin-bottom:10px"><h2 style="font-size:15px">내 책장</h2><span class="sub" id="bookShelfCount">0권</span></div>
+          <div class="shelf-grid" id="bookShelf"></div>
+        </div>
+        <div class="exp-pane" id="pane-movies">
+          <div class="card-head" style="margin-bottom:10px"><h2 style="font-size:15px">콘텐츠 선반</h2><span class="sub" id="movieShelfCount">0개</span></div>
+          <div class="shelf-grid" id="movieShelf"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Travel (여행) -->
+    <section class="panel" id="panel-travel" data-panel="travel">
+      <div class="card">
+        <div class="exp-hero-title">어디에 다녀왔나요?</div>
+        <p class="exp-hero-sub">장소를 찾아 지도에 핀을 남겨요</p>
+
+        <div class="search-shell">
+          <input type="search" id="travelQuery" placeholder="장소 · 도시 · 여행지" maxlength="80" enterkeyhint="search" autocomplete="off" />
+          <button type="button" class="btn-search" id="btnTravelSearch">검색</button>
+        </div>
+        <p class="search-hint">예: 성수동 카페 · 제주 애월</p>
+        <div class="search-status" id="travelSearchStatus"></div>
+        <div class="search-results place-mode" id="travelSearchResults"></div>
+        <div class="selected-chip" id="travelSelectedChip">
+          <div class="meta" style="padding-left:4px">
+            <em>장소 선택됨</em>
+            <strong id="travelSelectedTitle"></strong>
+            <span id="travelSelectedSub"></span>
+          </div>
+          <button type="button" class="clear" id="btnClearTravelSelected">취소</button>
+        </div>
+
+        <div class="field-row" style="margin-top:12px">
+          <label class="field">한 줄 메모
+            <input type="text" id="travelMemo" placeholder="방문 소감을 남겨보세요" maxlength="120" />
+          </label>
+        </div>
+        <button type="button" class="btn-primary" id="btnSaveTravel">지도에 저장</button>
+      </div>
+
+      <div class="card">
+        <div class="card-head" style="margin-bottom:10px"><h2 style="font-size:15px">다녀온 곳</h2><span class="sub" id="placeCount">0곳</span></div>
+        <div id="placeMap" aria-label="저장한 장소 지도"></div>
+        <div class="place-list" id="placeList"></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section class="panel" id="panel-settings" data-panel="settings">
+      <div class="card">
+        <div class="card-head"><h2>연간 목표</h2></div>
+        <div class="settings-grid">
+          <label class="field">독서 목표 (권)
+            <input type="number" id="setTargetBooks" min="1" step="1" />
+          </label>
+          <label class="field">어학 목표 (시간)
+            <input type="number" id="setTargetStudy" min="1" step="1" />
+          </label>
+          <button type="button" class="btn-primary" id="btnSaveGoals">저장하기</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>책 검색 보강 (선택)</h2></div>
+        <p class="muted-note">기본으로 국내 서점(알라딘) 검색이 동작해요. 카카오 키는 결과가 부족할 때 추가로 씁니다.</p>
+        <label class="field">카카오 REST API 키
+          <input type="password" id="setKakaoKey" placeholder="선택 사항" autocomplete="off" />
+        </label>
+        <button type="button" class="btn-ghost-wide" id="btnSaveKakaoKey">키 저장</button>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>클라우드 저장</h2><span class="sub" id="syncStatusLabel">연결 중…</span></div>
+        <p class="muted-note">기록은 이 기기와 Firebase에 함께 저장돼요. 다른 기기에서 이어보려면 아래 동기화 ID를 그대로 붙여넣으세요.</p>
+        <label class="field">동기화 ID
+          <input type="text" id="setSyncId" autocomplete="off" spellcheck="false" />
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+          <button type="button" class="btn-ghost-wide" id="btnCopySyncId">ID 복사</button>
+          <button type="button" class="btn-primary" id="btnApplySyncId" style="margin:0">ID 적용</button>
+        </div>
+        <button type="button" class="btn-ghost-wide" id="btnForceSync" style="margin-top:8px">지금 동기화</button>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>데이터 백업</h2></div>
+        <p class="muted-note">공부·가계부·독서·여행 기록을 UTF-8 BOM CSV로 내려받아요.</p>
+        <button type="button" class="btn-ghost-wide" id="btnExportSettings">📥 내 기록 CSV 내보내기</button>
+      </div>
+    </section>
+
+    <!-- Finance (가계부) — BankSalad CSV 기반 -->
+    <section class="panel" id="panel-finance" data-panel="finance">
+      <div class="card" style="padding-bottom:12px">
+        <div class="month-nav">
+          <button type="button" class="nav-circle" id="btnPrevMonth" aria-label="이전 달">‹</button>
+          <strong id="financeMonthLabel">2026년 8월</strong>
+          <button type="button" class="nav-circle" id="btnNextMonth" aria-label="다음 달">›</button>
+        </div>
+      </div>
+
+      <div class="ledger-hero">
+        <div class="label" id="ledgerHeroLabel">이번 달 지출</div>
+        <div class="big" id="ledgerHeroAmount">0원</div>
+        <div class="subline" id="ledgerHeroSub">뱅크샐러드 데이터 기준</div>
+      </div>
+
+      <div class="summary-grid three">
+        <div class="summary-tile income">
+          <div class="k">수입</div>
+          <div class="v" id="monthIncome">0원</div>
+        </div>
+        <div class="summary-tile expense">
+          <div class="k">지출</div>
+          <div class="v" id="monthExpense">0원</div>
+        </div>
+        <div class="summary-tile transfer">
+          <div class="k">이체</div>
+          <div class="v" id="monthTransfer">0원</div>
+        </div>
+      </div>
+
+      <div class="ledger-filters" id="ledgerFilters">
+        <button type="button" class="active" data-ledger-filter="all">전체</button>
+        <button type="button" data-ledger-filter="수입">수입</button>
+        <button type="button" data-ledger-filter="지출">지출</button>
+        <button type="button" data-ledger-filter="이체">이체</button>
+        <button type="button" class="loan-tab" id="btnOpenLoanSheet" data-ledger-action="loan">대출 현황</button>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>카테고리별 지출</h2><span class="sub" id="catSpendSub">상위</span></div>
+        <p class="instant-hint" style="margin-top:-4px;margin-bottom:10px">카테고리를 누르면 아래 내역이 필터링돼요</p>
+        <div class="cat-bars" id="ledgerCatBars"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>거래 내역</h2><span class="sub" id="ledgerTxCount">0건</span></div>
+        <div class="cat-filter-chip" id="ledgerCatFilterChip">
+          <span id="ledgerCatFilterLabel">카테고리 필터</span>
+          <button type="button" id="btnClearCatFilter">전체 보기</button>
+        </div>
+        <div id="ledgerStatus" class="ledger-status">가계부 데이터를 불러오는 중…</div>
+        <div id="ledgerTimeline"></div>
+      </div>
+    </section>
+  </div>
+
+  <nav class="tabbar" aria-label="메인 탭">
+    <button type="button" class="active" data-tab="dashboard"><span class="ico">⌂</span>홈</button>
+    <button type="button" data-tab="study"><span class="ico">文</span>어학</button>
+    <button type="button" data-tab="exercise"><span class="ico">💪</span>운동</button>
+    <button type="button" data-tab="reading"><span class="ico">📚</span>독서</button>
+    <button type="button" data-tab="travel"><span class="ico">✈</span>여행</button>
+    <button type="button" data-tab="finance"><span class="ico">₩</span>가계부</button>
+    <button type="button" data-tab="settings"><span class="ico">⚙</span>설정</button>
+  </nav>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <div class="day-sheet" id="daySheet" aria-hidden="true">
+    <div class="day-sheet-backdrop" id="daySheetBackdrop"></div>
+    <div class="day-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="daySheetTitle">
+      <div class="day-sheet-head">
+        <strong id="daySheetTitle">기록</strong>
+        <button type="button" class="close" id="btnCloseDaySheet" aria-label="닫기">✕</button>
+      </div>
+      <div id="daySheetBody"></div>
+    </div>
+  </div>
+
+  <div class="day-sheet" id="loanSheet" aria-hidden="true">
+    <div class="day-sheet-backdrop" id="loanSheetBackdrop"></div>
+    <div class="day-sheet-panel loan-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="loanSheetTitle">
+      <div class="day-sheet-head">
+        <strong id="loanSheetTitle">대출 현황</strong>
+        <button type="button" class="close" id="btnCloseLoanSheet" aria-label="닫기">✕</button>
+      </div>
+      <div class="loan-hero">
+        <div class="label">총 대출 잔액</div>
+        <div class="big" id="loanTotalBalance">—</div>
+        <div class="subline" id="loanHeroSub">대출 데이터를 불러오는 중…</div>
+      </div>
+      <div class="loan-summary-grid">
+        <div class="summary-tile loan">
+          <div class="k">이번 달 대출 상환</div>
+          <div class="v" id="loanMonthPay">—</div>
+        </div>
+        <div class="summary-tile">
+          <div class="k">예상 월 이자</div>
+          <div class="v" id="loanMonthInterest" style="color:var(--text)">—</div>
+        </div>
+        <div class="summary-tile">
+          <div class="k">평균 금리</div>
+          <div class="v" id="loanAvgRate" style="color:var(--text)">—</div>
+        </div>
+      </div>
+      <div id="loanList"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const STORAGE_KEY = "completion_life_log_v1";
+      const SYNC_ID_KEY = "completion_sync_id_v1";
+      const FIREBASE_CONFIG = {
+        apiKey: "AIzaSyA0RxZPIXGJCATfA6GdLbaS5IhbkLDi-2Y",
+        authDomain: "completion-life-log.firebaseapp.com",
+        projectId: "completion-life-log",
+        storageBucket: "completion-life-log.firebasestorage.app",
+        messagingSenderId: "594244046084",
+        appId: "1:594244046084:web:39eabe0a938f1ca09bd451",
+      };
+      const STEP_MIN = 15;
+      const PRESETS = [15, 30, 45, 60];
+      const DEFAULT_DRAFT = 30;
+      const COUNT_STEP = 5;
+      const COUNT_PRESETS = [10, 20, 30, 50];
+      const DEFAULT_COUNT_DRAFT = 20;
+
+      const CAT_LABEL = {
+        book: "📖 독서 완료",
+        movie: "🎬 영화/콘텐츠",
+        place: "📍 장소/여행",
+      };
+
+      const SUBJECTS = [
+        { key: "English", label: "영어", mark: "en", language: true, exercise: false, unit: "time" },
+        { key: "Chinese", label: "중국어", mark: "cn", language: true, exercise: false, unit: "time" },
+        { key: "Japanese", label: "일본어", mark: "jp", language: true, exercise: false, unit: "time" },
+        { key: "Pushup", label: "팔굽혀펴기", mark: "push", language: false, exercise: true, unit: "count" },
+        { key: "Squat", label: "스쿼트", mark: "squat", language: false, exercise: true, unit: "count" },
+        { key: "Run", label: "달리기", mark: "run", language: false, exercise: true, unit: "time" },
+        { key: "Boxing", label: "복싱", mark: "box", language: false, exercise: true, unit: "time" },
+      ];
+      const LANGUAGE_SUBJECTS = SUBJECTS.filter((s) => s.language);
+      const EXERCISE_SUBJECTS = SUBJECTS.filter((s) => s.exercise);
+      const EXERCISE_KEYS = new Set([
+        ...EXERCISE_SUBJECTS.map((s) => s.key),
+        "Exercise",
+      ]);
+      const HOME_MARKS = [
+        { key: "lang", label: "어학", mark: "lang" },
+        { key: "ex", label: "운동", mark: "ex" },
+        { key: "book", label: "독서", mark: "book" },
+        { key: "place", label: "여행", mark: "place" },
+      ];
+
+      const SUBJECT_LABEL = Object.fromEntries(SUBJECTS.map((s) => [s.key, s.label]));
+      SUBJECT_LABEL.Exercise = "운동";
+
+      function isExerciseSubject(key) {
+        return EXERCISE_KEYS.has(key);
+      }
+
+      function subjectMeta(key) {
+        return SUBJECTS.find((s) => s.key === key) || null;
+      }
+
+      function isCountSubject(key) {
+        const meta = subjectMeta(key);
+        return !!(meta && meta.unit === "count");
+      }
+
+      function defaultDraftFor(key) {
+        return isCountSubject(key) ? DEFAULT_COUNT_DRAFT : DEFAULT_DRAFT;
+      }
+
+      const defaultState = () => ({
+        profile: { targetBooks: 50, targetStudyHours: 300, kakaoRestKey: "" },
+        studyLogs: [],
+        financeLogs: [],
+        experienceLogs: [],
+        ledgerOverrides: {},
+        updatedAt: 0,
+      });
+
+      let state = loadState();
+      let ledgerRows = [];
+      let ledgerLoaded = false;
+      let loanRows = [];
+      let loansLoaded = false;
+      let ledgerFilter = "all";
+      let ledgerCatFilter = null; // category name or null
+      let expCategory = "book";
+      let bookKind = "all"; // all | book | comic
+      let expView = "books";
+      let viewMonth = todayYM();
+      let calMonth = todayYM();
+      /** @type {null | {title:string, subtitle:string, imageUrl:string, lat?:number, lng?:number, address?:string, sourceId?:string}} */
+      let expSelected = null;
+      let searchResults = [];
+      let placeMap = null;
+      let placeLayer = null;
+      /** @type {Record<string, number>} draft minutes or reps per subject */
+      const drafts = Object.fromEntries(SUBJECTS.map((s) => [s.key, defaultDraftFor(s.key)]));
+      let selectedCalDate = todayISO();
+
+      let db = null;
+      let cloudReady = false;
+      let cloudSaveTimer = null;
+      let syncing = false;
+
+      function getSyncId() {
+        let id = "";
+        try {
+          id = localStorage.getItem(SYNC_ID_KEY) || "";
+        } catch (_) {}
+        if (!id || id.length < 20) {
+          id =
+            "user_" +
+            (crypto.randomUUID
+              ? crypto.randomUUID().replace(/-/g, "")
+              : Date.now().toString(36) + Math.random().toString(36).slice(2)) +
+            Date.now().toString(36);
+          try {
+            localStorage.setItem(SYNC_ID_KEY, id);
+          } catch (_) {}
+        }
+        return id;
+      }
+
+      function setSyncId(next) {
+        const id = String(next || "").trim();
+        if (id.length < 20) {
+          toast("동기화 ID는 20자 이상이어야 해요");
+          return false;
+        }
+        try {
+          localStorage.setItem(SYNC_ID_KEY, id);
+        } catch (_) {
+          toast("동기화 ID 저장에 실패했어요");
+          return false;
+        }
+        return true;
+      }
+
+      function setSyncStatus(text) {
+        const el = document.getElementById("syncStatusLabel");
+        if (el) el.textContent = text;
+      }
+
+      function normalizeState(parsed) {
+        const base = defaultState();
+        if (!parsed || typeof parsed !== "object") return base;
+        return {
+          ...base,
+          ...parsed,
+          profile: { ...base.profile, ...(parsed.profile || {}) },
+          studyLogs: Array.isArray(parsed.studyLogs) ? parsed.studyLogs : [],
+          financeLogs: Array.isArray(parsed.financeLogs) ? parsed.financeLogs : [],
+          experienceLogs: Array.isArray(parsed.experienceLogs) ? parsed.experienceLogs : [],
+          ledgerOverrides:
+            parsed.ledgerOverrides && typeof parsed.ledgerOverrides === "object"
+              ? parsed.ledgerOverrides
+              : {},
+          updatedAt: Number(parsed.updatedAt || 0),
+        };
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return defaultState();
+          return normalizeState(JSON.parse(raw));
+        } catch {
+          return defaultState();
+        }
+      }
+
+      function saveStateLocal() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          return true;
+        } catch (err) {
+          console.warn("local save failed", err);
+          toast("로컬 저장 실패 · 저장공간이 부족할 수 있어요");
+          return false;
+        }
+      }
+
+      function saveState() {
+        state.updatedAt = Date.now();
+        saveStateLocal();
+        scheduleCloudSave();
+      }
+
+      function scheduleCloudSave() {
+        if (!cloudReady || !db) return;
+        clearTimeout(cloudSaveTimer);
+        cloudSaveTimer = setTimeout(() => {
+          pushToCloud().catch((err) => console.warn("cloud save", err));
+        }, 450);
+      }
+
+      async function pushToCloud() {
+        if (!db || syncing) return;
+        syncing = true;
+        setSyncStatus("저장 중…");
+        try {
+          const id = getSyncId();
+          await db.collection("users").doc(id).set(
+            {
+              profile: state.profile,
+              studyLogs: state.studyLogs,
+              financeLogs: state.financeLogs,
+              experienceLogs: state.experienceLogs,
+              ledgerOverrides: state.ledgerOverrides || {},
+              updatedAt: state.updatedAt || Date.now(),
+            },
+            { merge: true }
+          );
+          setSyncStatus("클라우드 저장됨");
+        } catch (err) {
+          console.warn(err);
+          setSyncStatus("클라우드 저장 실패");
+        } finally {
+          syncing = false;
+        }
+      }
+
+      async function pullFromCloud() {
+        if (!db) return false;
+        setSyncStatus("불러오는 중…");
+        try {
+          const snap = await db.collection("users").doc(getSyncId()).get();
+          if (!snap.exists) {
+            setSyncStatus("클라우드 대기 · 첫 저장 시 업로드");
+            await pushToCloud();
+            return false;
+          }
+          const remote = normalizeState(snap.data());
+          const localTs = Number(state.updatedAt || 0);
+          const remoteTs = Number(remote.updatedAt || 0);
+          if (remoteTs >= localTs) {
+            state = remote;
+            saveStateLocal();
+            setSyncStatus("클라우드에서 불러옴");
+            return true;
+          }
+          setSyncStatus("로컬이 더 최신 · 업로드");
+          await pushToCloud();
+          return false;
+        } catch (err) {
+          console.warn(err);
+          setSyncStatus("오프라인 · 로컬만 사용");
+          return false;
+        }
+      }
+
+      function initFirebase() {
+        try {
+          if (typeof firebase === "undefined") {
+            setSyncStatus("SDK 없음 · 로컬만");
+            return false;
+          }
+          if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+          db = firebase.firestore();
+          try {
+            db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+          } catch (_) {}
+          cloudReady = true;
+          setSyncStatus("클라우드 연결됨");
+          return true;
+        } catch (err) {
+          console.warn(err);
+          setSyncStatus("클라우드 연결 실패");
+          return false;
+        }
+      }
+
+      function uid() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      }
+
+      function todayISO() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+
+      function todayYM() {
+        return todayISO().slice(0, 7);
+      }
+
+      function formatWon(n) {
+        return Number(n || 0).toLocaleString("ko-KR") + "원";
+      }
+
+      /** hours → "1시간 30분" */
+      function formatDuration(hours) {
+        const mins = Math.round(Number(hours || 0) * 60);
+        return formatMinutes(mins);
+      }
+
+      function formatMinutes(mins) {
+        const m = Math.max(0, Math.round(mins));
+        if (m === 0) return "0분";
+        const h = Math.floor(m / 60);
+        const r = m % 60;
+        if (h === 0) return `${r}분`;
+        if (r === 0) return `${h}시간`;
+        return `${h}시간 ${r}분`;
+      }
+
+      function formatReps(n) {
+        return `${Math.max(0, Math.round(Number(n) || 0))}회`;
+      }
+
+      function studyLogHasValue(l) {
+        return Number(l.hours || 0) > 0 || Number(l.reps || 0) > 0;
+      }
+
+      function subjectRepsOnDate(subject, date) {
+        return state.studyLogs
+          .filter((l) => l.subject === subject && l.date === date)
+          .reduce((s, l) => s + Number(l.reps || 0), 0);
+      }
+
+      function totalExerciseRepsOnDate(date) {
+        return state.studyLogs
+          .filter((l) => l.date === date && isExerciseSubject(l.subject))
+          .reduce((s, l) => s + Number(l.reps || 0), 0);
+      }
+
+      function formatExerciseSummary(date) {
+        const mins = Math.round(totalExerciseHoursOnDate(date) * 60);
+        const reps = totalExerciseRepsOnDate(date);
+        const parts = [];
+        if (mins > 0) parts.push(formatMinutes(mins));
+        if (reps > 0) parts.push(formatReps(reps));
+        return parts.length ? parts.join(" · ") : "—";
+      }
+
+      function clampPct(current, target) {
+        if (!target || target <= 0) return 0;
+        return Math.min(100, Math.round((current / target) * 1000) / 10);
+      }
+
+      function toast(msg) {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.classList.add("show");
+        clearTimeout(toast._t);
+        toast._t = setTimeout(() => el.classList.remove("show"), 2000);
+      }
+
+      function vibrateSoft() {
+        try {
+          if (navigator.vibrate) navigator.vibrate(10);
+        } catch (_) {}
+      }
+
+      /* Aggregates */
+      function totalStudyHours() {
+        return state.studyLogs
+          .filter((l) => {
+            const meta = SUBJECTS.find((s) => s.key === l.subject);
+            if (meta) return meta.language;
+            return !isExerciseSubject(l.subject);
+          })
+          .reduce((s, l) => s + Number(l.hours || 0), 0);
+      }
+
+      function totalExerciseHoursOnDate(date) {
+        return state.studyLogs
+          .filter((l) => l.date === date && isExerciseSubject(l.subject))
+          .reduce((s, l) => s + Number(l.hours || 0), 0);
+      }
+
+      function subjectHours(subject) {
+        return state.studyLogs
+          .filter((l) => l.subject === subject)
+          .reduce((s, l) => s + Number(l.hours || 0), 0);
+      }
+
+      function subjectHoursOnDate(subject, date) {
+        return state.studyLogs
+          .filter((l) => l.subject === subject && l.date === date)
+          .reduce((s, l) => s + Number(l.hours || 0), 0);
+      }
+
+      function bookCount() {
+        return state.experienceLogs.filter((l) => l.category === "book").length;
+      }
+
+      function daySubjectMap() {
+        const map = {};
+        state.studyLogs.forEach((l) => {
+          if (!l.date || !studyLogHasValue(l)) return;
+          if (!map[l.date]) map[l.date] = new Set();
+          map[l.date].add(l.subject);
+        });
+        return map;
+      }
+
+      /** Home calendar: lang / ex / book / place */
+      function dayActivityMap() {
+        const map = {};
+        function add(date, key) {
+          if (!date) return;
+          if (!map[date]) map[date] = new Set();
+          map[date].add(key);
+        }
+        state.studyLogs.forEach((l) => {
+          if (!studyLogHasValue(l)) return;
+          const meta = SUBJECTS.find((s) => s.key === l.subject);
+          if (meta?.language) add(l.date, "lang");
+          else if (isExerciseSubject(l.subject)) add(l.date, "ex");
+        });
+        state.experienceLogs.forEach((l) => {
+          if (l.category === "book" || l.category === "movie") add(l.date, "book");
+          else if (l.category === "place") add(l.date, "place");
+        });
+        return map;
+      }
+
+      function activityDoneOnDate(key, date) {
+        const set = dayActivityMap()[date];
+        return !!(set && set.has(key));
+      }
+
+      function activityDetailOnDate(key, date) {
+        if (key === "lang") {
+          const mins = Math.round(
+            LANGUAGE_SUBJECTS.reduce((s, sub) => s + subjectHoursOnDate(sub.key, date), 0) * 60
+          );
+          return mins > 0 ? formatMinutes(mins) : "—";
+        }
+        if (key === "ex") return formatExerciseSummary(date);
+        if (key === "book") {
+          const n = state.experienceLogs.filter(
+            (l) => l.date === date && (l.category === "book" || l.category === "movie")
+          ).length;
+          return n > 0 ? `${n}건` : "—";
+        }
+        if (key === "place") {
+          const n = state.experienceLogs.filter((l) => l.date === date && l.category === "place").length;
+          return n > 0 ? `${n}곳` : "—";
+        }
+        return "—";
+      }
+
+      /* Render */
+      function renderTodayHero() {
+        const today = todayISO();
+        const d = new Date();
+        const week = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+        document.getElementById("todayDateLabel").textContent =
+          `${d.getMonth() + 1}월 ${d.getDate()}일 (${week}) · 오늘`;
+
+        let done = 0;
+        const strip = HOME_MARKS.map((s) => {
+          const isDone = activityDoneOnDate(s.key, today);
+          if (isDone) done += 1;
+          return `
+            <div class="habit-pill ${s.mark}${isDone ? " done" : ""}">
+              <div class="mark${isDone ? " live" : ""}"></div>
+              <div class="name">${s.label}</div>
+              <div class="mins">${activityDetailOnDate(s.key, today)}</div>
+            </div>`;
+        }).join("");
+
+        document.getElementById("todayDoneCount").textContent = String(done);
+        const scoreSpan = document.querySelector(".today-score span");
+        if (scoreSpan) scoreSpan.textContent = `/ ${HOME_MARKS.length} 완료`;
+        document.getElementById("habitStrip").innerHTML = strip;
+      }
+
+      function renderGauges() {
+        const books = bookCount();
+        const study = totalStudyHours();
+        const tb = Number(state.profile.targetBooks);
+        const ts = Number(state.profile.targetStudyHours);
+        const bp = clampPct(books, tb);
+        const sp = clampPct(study, ts);
+
+        document.getElementById("booksCurrent").textContent = books;
+        document.getElementById("booksTarget").textContent = tb;
+        document.getElementById("booksPct").textContent = bp + "%";
+        document.getElementById("booksBar").style.width = bp + "%";
+
+        document.getElementById("studyCurrent").textContent =
+          Math.round(study * 10) / 10;
+        document.getElementById("studyTarget").textContent = ts;
+        document.getElementById("studyPct").textContent = sp + "%";
+        document.getElementById("studyBar").style.width = sp + "%";
+
+        const tabCur = document.getElementById("studyCurrentTab");
+        if (tabCur) {
+          tabCur.textContent = Math.round(study * 10) / 10;
+          document.getElementById("studyTargetTab").textContent = ts;
+          document.getElementById("studyPctTab").textContent = sp + "%";
+          document.getElementById("studyBarTab").style.width = sp + "%";
+        }
+      }
+
+      function renderSubjectRoutineList(containerId, subjects) {
+        const today = todayISO();
+        const list = document.getElementById(containerId);
+        if (!list) return;
+        list.innerHTML = subjects.map((s) => {
+          const countMode = s.unit === "count";
+          const draft = drafts[s.key];
+          const todayMins = Math.round(subjectHoursOnDate(s.key, today) * 60);
+          const todayReps = subjectRepsOnDate(s.key, today);
+          const has = countMode ? todayReps > 0 : todayMins > 0;
+          const todayLabel = countMode
+            ? `오늘 ${formatReps(todayReps)}`
+            : `오늘 ${formatMinutes(todayMins)}`;
+          const presetValues = countMode ? COUNT_PRESETS : PRESETS;
+          const presets = presetValues
+            .map((m) => {
+              const active = draft === m ? " active" : "";
+              const label = countMode ? `${m}회` : m === 60 ? "1시간" : `${m}분`;
+              return `<button type="button" class="preset${active}" data-preset="${s.key}" data-min="${m}">${label}</button>`;
+            })
+            .join("");
+          const draftLabel = countMode ? formatReps(draft) : formatMinutes(draft);
+          const unitHint = countMode ? "기록할 횟수" : "기록할 시간";
+          const stepAria = countMode ? "5회" : "15분";
+
+          return `
+            <article class="routine-item" data-routine="${s.key}" id="routine-${s.key}">
+              <div class="routine-top">
+                <div class="routine-label">
+                  <span class="swatch ${s.mark}"></span>${s.label}
+                </div>
+                <span class="today-badge${has ? " has" : ""}">${todayLabel}</span>
+              </div>
+              <div class="stepper">
+                <button type="button" class="step-btn" data-step="${s.key}" data-dir="-1" aria-label="${stepAria} 감소">−</button>
+                <div class="step-value">
+                  <strong id="draft-${s.key}">${draftLabel}</strong>
+                  <em>${unitHint}</em>
+                </div>
+                <button type="button" class="step-btn" data-step="${s.key}" data-dir="1" aria-label="${stepAria} 증가">+</button>
+              </div>
+              <div class="preset-row">${presets}</div>
+              <button type="button" class="btn-commit" data-commit="${s.key}">
+                ${draftLabel} 기록하기
+              </button>
+            </article>`;
+        }).join("");
+      }
+
+      function renderRoutineList() {
+        renderSubjectRoutineList("routineList", LANGUAGE_SUBJECTS);
+        renderSubjectRoutineList("exerciseList", EXERCISE_SUBJECTS);
+      }
+
+      function renderStudyHabitStrip() {
+        const el = document.getElementById("studyHabitStrip");
+        if (!el) return;
+        const today = todayISO();
+        el.innerHTML = LANGUAGE_SUBJECTS.map((s) => {
+          const mins = Math.round(subjectHoursOnDate(s.key, today) * 60);
+          const isDone = mins > 0;
+          return `
+            <div class="habit-pill ${s.mark}${isDone ? " done" : ""}">
+              <div class="mark${isDone ? " live" : ""}"></div>
+              <div class="name">${s.label}</div>
+              <div class="mins">${isDone ? formatMinutes(mins) : "—"}</div>
+            </div>`;
+        }).join("");
+      }
+
+      function renderExerciseHabitStrip() {
+        const el = document.getElementById("exerciseHabitStrip");
+        if (!el) return;
+        const today = todayISO();
+        el.innerHTML = EXERCISE_SUBJECTS.map((s) => {
+          const countMode = s.unit === "count";
+          const mins = Math.round(subjectHoursOnDate(s.key, today) * 60);
+          const reps = subjectRepsOnDate(s.key, today);
+          const isDone = countMode ? reps > 0 : mins > 0;
+          const detail = countMode
+            ? isDone
+              ? formatReps(reps)
+              : "—"
+            : isDone
+              ? formatMinutes(mins)
+              : "—";
+          return `
+            <div class="habit-pill ${s.mark}${isDone ? " done" : ""}">
+              <div class="mark${isDone ? " live" : ""}"></div>
+              <div class="name">${s.label}</div>
+              <div class="mins">${detail}</div>
+            </div>`;
+        }).join("");
+      }
+
+      function updateRoutineDraftUI(subject) {
+        const draft = drafts[subject];
+        const countMode = isCountSubject(subject);
+        const label = countMode ? formatReps(draft) : formatMinutes(draft);
+        const strong = document.getElementById("draft-" + subject);
+        if (strong) strong.textContent = label;
+
+        const item = document.querySelector(`[data-routine="${subject}"]`);
+        if (!item) return;
+        item.querySelectorAll("[data-preset]").forEach((btn) => {
+          btn.classList.toggle("active", Number(btn.dataset.min) === draft);
+        });
+        const commit = item.querySelector("[data-commit]");
+        if (commit) {
+          commit.textContent = `${label} 기록하기`;
+          commit.disabled = draft <= 0;
+        }
+      }
+
+      function renderCalendar() {
+        const [y, m] = calMonth.split("-").map(Number);
+        document.getElementById("calMonthLabel").textContent = `${y}년 ${m}월`;
+
+        const first = new Date(y, m - 1, 1);
+        const daysInMonth = new Date(y, m, 0).getDate();
+        const startPad = first.getDay();
+        const today = todayISO();
+        const done = dayActivityMap();
+
+        const cells = [];
+        for (let i = 0; i < startPad; i++) cells.push('<div class="cal-cell empty"></div>');
+        for (let d = 1; d <= daysInMonth; d++) {
+          const date = `${calMonth}-${String(d).padStart(2, "0")}`;
+          const set = done[date] || new Set();
+          const marks = HOME_MARKS.map((s) => {
+            const on = set.has(s.key) ? "on" : "";
+            return `<i class="${on} ${s.mark}"></i>`;
+          }).join("");
+          const selected = date === selectedCalDate ? " selected" : "";
+          const todayCls = date === today ? " today" : "";
+          cells.push(`
+            <button type="button" class="cal-cell${todayCls}${selected}" data-cal-date="${date}" title="${date}">
+              <span class="day-num">${d}</span>
+              <div class="marks">${marks}</div>
+            </button>`);
+        }
+        document.getElementById("calGrid").innerHTML = cells.join("");
+      }
+
+      function openDaySheet(date) {
+        selectedCalDate = date;
+        const sheet = document.getElementById("daySheet");
+        const [y, m, d] = date.split("-").map(Number);
+        const weekday = ["일", "월", "화", "수", "목", "금", "토"][new Date(y, m - 1, d).getDay()];
+        const isToday = date === todayISO();
+        document.getElementById("daySheetTitle").textContent =
+          `${m}월 ${d}일 (${weekday})${isToday ? " · 오늘" : ""}`;
+        document.getElementById("daySheetBody").innerHTML = buildDaySheetHtml(date);
+        sheet.classList.add("open");
+        sheet.setAttribute("aria-hidden", "false");
+        renderCalendar();
+      }
+
+      function closeDaySheet() {
+        const sheet = document.getElementById("daySheet");
+        sheet.classList.remove("open");
+        sheet.setAttribute("aria-hidden", "true");
+      }
+
+      function openLoanSheet() {
+        if (!loansLoaded || !loanRows.length) return;
+        const sheet = document.getElementById("loanSheet");
+        sheet.classList.add("open");
+        sheet.setAttribute("aria-hidden", "false");
+      }
+
+      function closeLoanSheet() {
+        const sheet = document.getElementById("loanSheet");
+        sheet.classList.remove("open");
+        sheet.setAttribute("aria-hidden", "true");
+      }
+
+      function buildDaySheetHtml(date) {
+        const sections = [];
+
+        const langLogs = state.studyLogs
+          .filter((l) => l.date === date && subjectMeta(l.subject)?.language && studyLogHasValue(l))
+          .sort((a, b) => (a.subject || "").localeCompare(b.subject || ""));
+        if (langLogs.length) {
+          sections.push(`<div class="day-section"><h3>어학</h3>${langLogs
+            .map((l) => {
+              const label = SUBJECT_LABEL[l.subject] || l.subject;
+              const val = formatMinutes(Math.round(Number(l.hours || 0) * 60));
+              return `<div class="day-row"><div>${escapeHtml(label)}</div><div class="val">${val}</div></div>`;
+            })
+            .join("")}</div>`);
+        }
+
+        const exLogs = state.studyLogs
+          .filter((l) => l.date === date && isExerciseSubject(l.subject) && studyLogHasValue(l))
+          .sort((a, b) => (a.subject || "").localeCompare(b.subject || ""));
+        if (exLogs.length) {
+          sections.push(`<div class="day-section"><h3>운동</h3>${exLogs
+            .map((l) => {
+              const label = SUBJECT_LABEL[l.subject] || l.subject;
+              const val =
+                Number(l.reps || 0) > 0
+                  ? formatReps(l.reps)
+                  : formatMinutes(Math.round(Number(l.hours || 0) * 60));
+              return `<div class="day-row"><div>${escapeHtml(label)}</div><div class="val">${val}</div></div>`;
+            })
+            .join("")}</div>`);
+        }
+
+        const books = state.experienceLogs.filter(
+          (l) => l.date === date && (l.category === "book" || l.category === "movie")
+        );
+        if (books.length) {
+          sections.push(`<div class="day-section"><h3>독서 · 콘텐츠</h3>${books
+            .map((l) => {
+              const kind = l.category === "movie" ? "콘텐츠" : l.bookKind === "comic" ? "만화" : "도서";
+              return `<div class="day-row"><div>${escapeHtml(l.title || "")}<div class="meta">${kind}${l.memo ? " · " + escapeHtml(l.memo) : ""}</div></div></div>`;
+            })
+            .join("")}</div>`);
+        }
+
+        const places = state.experienceLogs.filter((l) => l.date === date && l.category === "place");
+        if (places.length) {
+          sections.push(`<div class="day-section"><h3>여행</h3>${places
+            .map((l) => {
+              return `<div class="day-row"><div>${escapeHtml(l.title || "")}<div class="meta">${escapeHtml(l.address || l.memo || "")}</div></div></div>`;
+            })
+            .join("")}</div>`);
+        }
+
+        if (!sections.length) {
+          return `<p class="empty">이 날의 기록이 없어요</p>`;
+        }
+        return sections.join("");
+      }
+
+      const FORCED_LOAN_MARKERS = ["311243546349", "311234455656"];
+
+      function isForcedLoanRow(r) {
+        const title = String(r.title || "");
+        return FORCED_LOAN_MARKERS.some((m) => title.includes(m));
+      }
+
+      function isHyundaiCardLoanRow(r) {
+        const title = String(r.title || "");
+        return title.includes("현대카드");
+      }
+
+      function intrinsicLedgerCategory(r) {
+        if (isForcedLoanRow(r)) return "이자/대출";
+        if (isHyundaiCardLoanRow(r)) return "자동차 대출금";
+        const sub = String(r.subcategory || "").trim();
+        const cat = String(r.category || "").trim() || "미분류";
+        if (cat === "이자/대출" || sub === "이자/대출") return "이자/대출";
+        if (cat === "자동차 대출금") return "자동차 대출금";
+        return cat;
+      }
+
+      function resolveLedgerCategory(r) {
+        // raw 데이터 오분류 보정
+        if (isForcedLoanRow(r)) return "이자/대출";
+        if (isHyundaiCardLoanRow(r)) return "자동차 대출금";
+        const ov = state.ledgerOverrides && state.ledgerOverrides[r.id];
+        if (ov && ov.category) return ov.category;
+        return intrinsicLedgerCategory(r);
+      }
+
+      function ledgerCategoryOptions() {
+        const set = new Set([
+          "이자/대출",
+          "자동차 대출금",
+          "미분류",
+          "식비",
+          "카페/간식",
+          "교통",
+          "생활",
+          "주거/통신",
+          "온라인쇼핑",
+          "패션/쇼핑",
+          "문화/여가",
+          "교육/학습",
+          "여행/숙박",
+          "자동차",
+          "금융",
+          "경조/선물",
+          "저축",
+          "이체",
+          "현금",
+        ]);
+        ledgerRows.forEach((r) => {
+          if (r.category) set.add(r.category);
+          set.add(intrinsicLedgerCategory(r));
+        });
+        Object.values(state.ledgerOverrides || {}).forEach((o) => {
+          if (o && o.category) set.add(o.category);
+        });
+        return [...set].sort((a, b) => a.localeCompare(b, "ko"));
+      }
+
+      function setLedgerCategory(id, category) {
+        if (!state.ledgerOverrides) state.ledgerOverrides = {};
+        const row = ledgerRows.find((r) => r.id === id);
+        const intrinsic = row ? intrinsicLedgerCategory(row) : "";
+        if (!category || category === intrinsic) {
+          delete state.ledgerOverrides[id];
+        } else {
+          state.ledgerOverrides[id] = { category };
+        }
+        saveState();
+        renderFinance();
+        toast(`${category}(으)로 옮겼어요`);
+      }
+
+      function loanMonthsLeft(maturity) {
+        const m = String(maturity || "").trim();
+        if (!m) return null;
+        const end = new Date(m + "T00:00:00");
+        if (Number.isNaN(end.getTime())) return null;
+        const now = new Date();
+        const months =
+          (end.getFullYear() - now.getFullYear()) * 12 + (end.getMonth() - now.getMonth());
+        return Math.max(0, months);
+      }
+
+      function renderLoans(monthRows) {
+        const list = document.getElementById("loanList");
+        const btnOpen = document.getElementById("btnOpenLoanSheet");
+
+        if (!loansLoaded) {
+          document.getElementById("loanTotalBalance").textContent = "—";
+          document.getElementById("loanHeroSub").textContent = "대출 데이터를 불러오는 중…";
+          document.getElementById("loanMonthPay").textContent = "—";
+          document.getElementById("loanMonthInterest").textContent = "—";
+          document.getElementById("loanAvgRate").textContent = "—";
+          if (btnOpen) btnOpen.disabled = true;
+          if (list) list.innerHTML = "";
+          return;
+        }
+
+        const totalBalance = loanRows.reduce((s, l) => s + l.balance, 0);
+        const monthInterest = loanRows.reduce(
+          (s, l) => s + (l.balance * l.rate) / 100 / 12,
+          0
+        );
+        const weightedRate = totalBalance
+          ? loanRows.reduce((s, l) => s + l.balance * l.rate, 0) / totalBalance
+          : 0;
+
+        const loanCats = new Set(["이자/대출", "자동차 대출금"]);
+        const monthPay = (monthRows || [])
+          .filter((r) => r.type === "지출" && loanCats.has(resolveLedgerCategory(r)))
+          .reduce((s, r) => s + Math.abs(r.amount), 0);
+
+        document.getElementById("loanTotalBalance").textContent = formatWon(totalBalance);
+        document.getElementById("loanMonthPay").textContent = formatWon(monthPay);
+        document.getElementById("loanMonthInterest").textContent = formatWon(Math.round(monthInterest));
+        document.getElementById("loanAvgRate").textContent = weightedRate
+          ? `${weightedRate.toFixed(2)}%`
+          : "—";
+        document.getElementById("loanHeroSub").textContent =
+          `${loanRows.length}건 · 예상 월 이자 ${formatWon(Math.round(monthInterest))} · 평균 ${weightedRate.toFixed(2)}%`;
+        if (btnOpen) btnOpen.disabled = !loanRows.length;
+
+        if (!loanRows.length) {
+          if (list) list.innerHTML = `<p class="empty" style="padding:16px 0">등록된 대출이 없어요</p>`;
+          return;
+        }
+
+        const groups = {};
+        loanRows.forEach((l) => {
+          const key = l.type || "기타";
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(l);
+        });
+        const typeOrder = { 은행: 0, 학자금: 1, 자동차: 2 };
+        const sortedTypes = Object.keys(groups).sort(
+          (a, b) => (typeOrder[a] ?? 9) - (typeOrder[b] ?? 9)
+        );
+
+        if (!list) return;
+        list.innerHTML = sortedTypes
+          .map((type) => {
+            const items = groups[type].slice().sort((a, b) => b.balance - a.balance);
+            const groupTotal = items.reduce((s, l) => s + l.balance, 0);
+            const rows = items
+              .map((l) => {
+                const share = totalBalance ? Math.round((l.balance / totalBalance) * 100) : 0;
+                const monthsLeft = loanMonthsLeft(l.maturity);
+                const maturityLabel = l.maturity
+                  ? `${l.maturity.slice(0, 4)}.${l.maturity.slice(5, 7)}.${l.maturity.slice(8, 10)}`
+                  : "—";
+                const remainLabel =
+                  monthsLeft === null
+                    ? ""
+                    : monthsLeft === 0
+                      ? "만기 도래"
+                      : `${monthsLeft}개월 남음`;
+                return `
+                <div class="loan-row">
+                  <div class="name">${escapeHtml(l.name)}</div>
+                  <div class="balance">${formatWon(l.balance)}</div>
+                  <div class="meta">
+                    <span>금리 ${l.rate}%</span>
+                    <span>만기 ${maturityLabel}</span>
+                    ${remainLabel ? `<span>${remainLabel}</span>` : ""}
+                    <span>비중 ${share}%</span>
+                  </div>
+                  <div class="track-wrap">
+                    <div class="track-label">
+                      <span>${escapeHtml(type)}</span>
+                      <span>${share}%</span>
+                    </div>
+                    <div class="loan-track"><i style="width:${Math.max(4, share)}%"></i></div>
+                  </div>
+                </div>`;
+              })
+              .join("");
+            return `
+              <div class="loan-group">
+                <div class="loan-group-head">
+                  <span>${escapeHtml(type)} · ${items.length}건</span>
+                  <span class="amt">${formatWon(groupTotal)}</span>
+                </div>
+                ${rows}
+              </div>`;
+          })
+          .join("");
+      }
+
+      function renderFinance() {
+        const [y, m] = viewMonth.split("-").map(Number);
+        document.getElementById("financeMonthLabel").textContent = `${y}년 ${m}월`;
+
+        const status = document.getElementById("ledgerStatus");
+        const timeline = document.getElementById("ledgerTimeline");
+        const catBars = document.getElementById("ledgerCatBars");
+        const chip = document.getElementById("ledgerCatFilterChip");
+
+        if (!ledgerLoaded) {
+          status.hidden = false;
+          status.textContent = "가계부 데이터를 불러오는 중…";
+          timeline.innerHTML = "";
+          catBars.innerHTML = "";
+          document.getElementById("monthIncome").textContent = "—";
+          document.getElementById("monthExpense").textContent = "—";
+          document.getElementById("monthTransfer").textContent = "—";
+          document.getElementById("ledgerHeroAmount").textContent = "—";
+          chip.classList.remove("show");
+          renderLoans([]);
+          return;
+        }
+
+        const monthRows = ledgerRows.filter((r) => (r.date || "").startsWith(viewMonth));
+        renderLoans(monthRows);
+        let income = 0;
+        let expense = 0;
+        let transfer = 0;
+        monthRows.forEach((r) => {
+          const abs = Math.abs(r.amount);
+          if (r.type === "수입") income += abs;
+          else if (r.type === "이체") transfer += abs;
+          else if (r.type === "지출") expense += abs;
+        });
+
+        document.getElementById("monthIncome").textContent = formatWon(income);
+        document.getElementById("monthExpense").textContent = formatWon(expense);
+        document.getElementById("monthTransfer").textContent = formatWon(transfer);
+        document.getElementById("ledgerHeroLabel").textContent = "이번 달 지출";
+        document.getElementById("ledgerHeroAmount").textContent = formatWon(expense);
+        document.getElementById("ledgerHeroAmount").classList.toggle("plus", false);
+        document.getElementById("ledgerHeroSub").textContent =
+          `수입 ${formatWon(income)} · 이체 ${formatWon(transfer)} · ${monthRows.length}건`;
+
+        let filtered =
+          ledgerFilter === "all"
+            ? monthRows.slice()
+            : monthRows.filter((r) => r.type === ledgerFilter);
+
+        // 카테고리별 지출 클릭 → 해당 카테고리 지출만
+        if (ledgerCatFilter) {
+          filtered = monthRows.filter(
+            (r) => r.type === "지출" && resolveLedgerCategory(r) === ledgerCatFilter
+          );
+          chip.classList.add("show");
+          document.getElementById("ledgerCatFilterLabel").textContent =
+            `선택: ${ledgerCatFilter}`;
+        } else {
+          chip.classList.remove("show");
+        }
+
+        document.getElementById("ledgerTxCount").textContent = `${filtered.length}건`;
+
+        const catMap = {};
+        monthRows
+          .filter((r) => r.type === "지출")
+          .forEach((r) => {
+            const key = resolveLedgerCategory(r);
+            catMap[key] = (catMap[key] || 0) + Math.abs(r.amount);
+          });
+        const catList = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+        const catMax = catList.length ? catList[0][1] : 1;
+        const palette = ["#f04452", "#ffb020", "#ff7ab8", "#3182f6", "#03b26c", "#a78bfa", "#fb7185", "#38bdf8"];
+        document.getElementById("catSpendSub").textContent = expense ? `총 ${formatWon(expense)}` : "없음";
+        if (!catList.length) {
+          catBars.innerHTML = `<p class="empty" style="padding:16px 0">이번 달 지출 카테고리가 없어요</p>`;
+        } else {
+          catBars.innerHTML = catList
+            .map(([name, amt], i) => {
+              const pct = Math.max(4, Math.round((amt / catMax) * 100));
+              const share = expense ? Math.round((amt / expense) * 100) : 0;
+              const active = ledgerCatFilter === name ? " active" : "";
+              const color =
+                name === "이자/대출" || name === "자동차 대출금"
+                  ? "#ffb020"
+                  : palette[i % palette.length];
+              return `
+              <button type="button" class="cat-bar-row${active}" data-cat-filter="${encodeURIComponent(name)}">
+                <div class="cat-bar-top">
+                  <span>${escapeHtml(name)} · ${share}%</span>
+                  <span class="amt">${formatWon(amt)}</span>
+                </div>
+                <div class="cat-track"><i style="width:${pct}%;background:${color}"></i></div>
+              </button>`;
+            })
+            .join("");
+        }
+
+        if (!filtered.length) {
+          status.hidden = false;
+          status.textContent = ledgerRows.length
+            ? ledgerCatFilter
+              ? `「${ledgerCatFilter}」 지출 내역이 없어요`
+              : "이 달·필터에 해당하는 거래가 없어요"
+            : "가계부 CSV를 불러오지 못했어요";
+          timeline.innerHTML = "";
+          return;
+        }
+
+        status.hidden = true;
+        const typeOrder = { "수입": 0, "지출": 1, "이체": 2 };
+        const options = ledgerCategoryOptions();
+        const byDate = {};
+        filtered.forEach((r) => {
+          if (!byDate[r.date]) byDate[r.date] = [];
+          byDate[r.date].push(r);
+        });
+        const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+        timeline.innerHTML = dates
+          .map((date) => {
+            const dayRows = byDate[date].slice().sort((a, b) => {
+              const ta = typeOrder[a.type] ?? 9;
+              const tb = typeOrder[b.type] ?? 9;
+              if (ta !== tb) return ta - tb;
+              return (b.time || "").localeCompare(a.time || "");
+            });
+            const dayExpense = dayRows
+              .filter((r) => r.type === "지출")
+              .reduce((s, r) => s + Math.abs(r.amount), 0);
+            const [, mm, dd] = date.split("-");
+            const weekday = ["일", "월", "화", "수", "목", "금", "토"][
+              new Date(Number(date.slice(0, 4)), Number(mm) - 1, Number(dd)).getDay()
+            ];
+            const txs = dayRows
+              .map((r) => {
+                const amtCls = r.type === "수입" ? "in" : r.type === "이체" ? "move" : "out";
+                const abs = Math.abs(r.amount);
+                const sign = r.type === "수입" ? "+" : r.type === "지출" ? "-" : r.amount >= 0 ? "+" : "-";
+                const resolved = resolveLedgerCategory(r);
+                const selectOpts = options
+                  .map(
+                    (c) =>
+                      `<option value="${escapeAttr(c)}"${c === resolved ? " selected" : ""}>${escapeHtml(c)}</option>`
+                  )
+                  .join("");
+                const originalHint =
+                  intrinsicLedgerCategory(r) !== resolved
+                    ? `원본 ${intrinsicLedgerCategory(r)}`
+                    : r.subcategory && r.subcategory !== resolved
+                      ? r.subcategory
+                      : "";
+                return `
+                <div class="ledger-tx">
+                  <div>
+                    <div class="title">${escapeHtml(r.title || "(내용 없음)")}</div>
+                    <div class="meta">${escapeHtml(resolved)}${originalHint ? " · " + escapeHtml(originalHint) : ""}${r.method ? " · " + escapeHtml(r.method) : ""}${r.time ? " · " + escapeHtml(r.time) : ""}</div>
+                    <select class="cat-select" data-ledger-id="${escapeAttr(r.id)}" aria-label="카테고리 변경">
+                      ${selectOpts}
+                    </select>
+                  </div>
+                  <div class="amt ${amtCls}">${sign}${abs.toLocaleString("ko-KR")}원</div>
+                </div>`;
+              })
+              .join("");
+            return `
+              <div class="ledger-day">
+                <div class="ledger-day-head">
+                  <strong>${Number(mm)}월 ${Number(dd)}일 (${weekday})</strong>
+                  <span>${dayExpense ? "지출 " + formatWon(dayExpense) : dayRows.length + "건"}</span>
+                </div>
+                ${txs}
+              </div>`;
+          })
+          .join("");
+      }
+
+      function parseCSVText(text) {
+        const rows = [];
+        let row = [];
+        let cur = "";
+        let q = false;
+        for (let i = 0; i < text.length; i++) {
+          const c = text[i];
+          const n = text[i + 1];
+          if (q) {
+            if (c === '"' && n === '"') {
+              cur += '"';
+              i++;
+            } else if (c === '"') q = false;
+            else cur += c;
+          } else if (c === '"') q = true;
+          else if (c === ",") {
+            row.push(cur);
+            cur = "";
+          } else if (c === "\n" || (c === "\r" && n === "\n")) {
+            if (c === "\r") i++;
+            row.push(cur);
+            rows.push(row);
+            row = [];
+            cur = "";
+          } else if (c === "\r") {
+            row.push(cur);
+            rows.push(row);
+            row = [];
+            cur = "";
+          } else cur += c;
+        }
+        if (cur.length || row.length) {
+          row.push(cur);
+          rows.push(row);
+        }
+        return rows;
+      }
+
+      async function loadLedgerData() {
+        const status = document.getElementById("ledgerStatus");
+        try {
+          const urls = ["/data/ledger.csv", "/data/" + encodeURIComponent("가계부.csv")];
+          let text = "";
+          let ok = false;
+          for (const url of urls) {
+            const res = await fetch(url, { cache: "no-store" });
+            if (res.ok) {
+              text = await res.text();
+              ok = true;
+              break;
+            }
+          }
+          if (!ok) throw new Error("ledger fetch failed");
+
+          const table = parseCSVText(text.replace(/^\uFEFF/, ""));
+          const header = (table[0] || []).map((h) => String(h || "").replace(/^\uFEFF/, "").trim());
+          const idx = {
+            date: header.indexOf("날짜"),
+            time: header.indexOf("시간"),
+            type: header.indexOf("타입"),
+            category: header.indexOf("대분류"),
+            subcategory: header.indexOf("소분류"),
+            title: header.indexOf("내용"),
+            amount: header.indexOf("금액"),
+            method: header.indexOf("결제수단"),
+            memo: header.indexOf("메모"),
+          };
+
+          ledgerRows = table
+            .slice(1)
+            .map((r, i) => {
+              const date = String(r[idx.date] || "").trim();
+              const type = String(r[idx.type] || "").trim();
+              const amount = Number(String(r[idx.amount] || "0").replace(/,/g, ""));
+              if (!date || !type || !Number.isFinite(amount)) return null;
+              const time = String(r[idx.time] || "").trim();
+              const title = String(r[idx.title] || "").trim();
+              return {
+                id: `${date}|${time}|${title}|${amount}|${i}`,
+                date,
+                time,
+                type,
+                category: String(r[idx.category] || "").trim() || "미분류",
+                subcategory: String(r[idx.subcategory] || "").trim(),
+                title,
+                amount,
+                method: String(r[idx.method] || "").trim(),
+                memo: String(r[idx.memo] || "").trim(),
+              };
+            })
+            .filter(Boolean);
+
+          ledgerLoaded = true;
+          const months = [...new Set(ledgerRows.map((r) => r.date.slice(0, 7)))].sort();
+          if (months.length) {
+            const latest = months[months.length - 1];
+            if (!months.includes(viewMonth)) viewMonth = latest;
+          }
+          if (status) status.textContent = `${ledgerRows.length.toLocaleString("ko-KR")}건 불러왔어요`;
+          renderFinance();
+        } catch (err) {
+          console.warn(err);
+          ledgerLoaded = true;
+          ledgerRows = [];
+          if (status) status.textContent = "가계부 CSV를 불러오지 못했어요. data/ledger.csv 를 확인해 주세요.";
+          renderFinance();
+        }
+      }
+
+      async function loadLoansData() {
+        try {
+          const res = await fetch("/data/loans.csv", { cache: "no-store" });
+          if (!res.ok) throw new Error("loans fetch failed");
+          const text = await res.text();
+          const table = parseCSVText(text.replace(/^\uFEFF/, ""));
+          const header = (table[0] || []).map((h) => String(h || "").replace(/^\uFEFF/, "").trim());
+          const idx = {
+            name: header.indexOf("대출내용"),
+            balance: header.indexOf("대출잔액"),
+            rate: header.indexOf("대출금리"),
+            maturity: header.indexOf("대출만기일"),
+            type: header.indexOf("유형"),
+          };
+
+          loanRows = table
+            .slice(1)
+            .map((r) => {
+              const name = String(r[idx.name] || "").trim();
+              const balance = Number(String(r[idx.balance] || "0").replace(/,/g, ""));
+              const rate = Number(String(r[idx.rate] || "0").replace(/,/g, ""));
+              const maturity = String(r[idx.maturity] || "").trim();
+              if (!name || !Number.isFinite(balance) || balance <= 0) return null;
+              return {
+                name,
+                balance,
+                rate: Number.isFinite(rate) ? rate : 0,
+                maturity,
+                type: String(r[idx.type] || "").trim() || "기타",
+              };
+            })
+            .filter(Boolean);
+
+          loansLoaded = true;
+          renderFinance();
+        } catch (err) {
+          console.warn(err);
+          loansLoaded = true;
+          loanRows = [];
+          renderFinance();
+        }
+      }
+
+      function renderExperience() {
+        renderShelf("book", "bookShelf", "bookShelfCount", "권");
+        renderShelf("movie", "movieShelf", "movieShelfCount", "개");
+        renderPlaces();
+      }
+
+      function renderShelf(category, gridId, countId, unit) {
+        const logs = state.experienceLogs
+          .filter((l) => l.category === category)
+          .slice()
+          .sort((a, b) => (b.date + (b.id || "")).localeCompare(a.date + (a.id || "")));
+        document.getElementById(countId).textContent = `${logs.length}${unit}`;
+        const grid = document.getElementById(gridId);
+        if (!logs.length) {
+          grid.innerHTML = `<p class="empty" style="grid-column:1/-1">아직 비어 있어요.<br/>위에서 검색해 첫 작품을 꽂아보세요.</p>`;
+          return;
+        }
+        const emoji = category === "book" ? "📖" : "🎬";
+        grid.innerHTML = logs.map((l) => {
+          const cover = l.imageUrl
+            ? `<img src="${escapeAttr(l.imageUrl)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" />
+               <div class="cover-fallback" style="display:none">${emoji}</div>`
+            : `<div class="cover-fallback">${emoji}</div>`;
+          const badge =
+            category === "book" && l.bookKind === "comic"
+              ? `<span class="badge-comic">만화</span>`
+              : "";
+          return `
+            <div class="shelf-item">
+              <div class="cover-wrap">
+                <button type="button" class="del-x" data-del-exp="${l.id}" aria-label="삭제">✕</button>
+                ${badge}
+                ${cover}
+              </div>
+              <div class="caption">${escapeHtml(l.title || "")}</div>
+              <div class="sub">${l.date}${l.subtitle ? " · " + escapeHtml(l.subtitle) : ""}</div>
+            </div>`;
+        }).join("");
+      }
+
+      function googleMapsUrl(lat, lng, title) {
+        if (lat != null && lng != null) {
+          return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lat + "," + lng)}`;
+        }
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(title || "")}`;
+      }
+
+      function ensurePlaceMap() {
+        const el = document.getElementById("placeMap");
+        if (!el || typeof L === "undefined") return null;
+        if (!placeMap) {
+          placeMap = L.map(el, { zoomControl: false, attributionControl: true });
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap',
+          }).addTo(placeMap);
+          L.control.zoom({ position: "bottomright" }).addTo(placeMap);
+          placeLayer = L.layerGroup().addTo(placeMap);
+          placeMap.setView([37.5665, 126.978], 11);
+        }
+        setTimeout(() => placeMap.invalidateSize(), 80);
+        return placeMap;
+      }
+
+      function renderPlaces() {
+        const places = state.experienceLogs
+          .filter((l) => l.category === "place")
+          .slice()
+          .sort((a, b) => (b.date + (b.id || "")).localeCompare(a.date + (a.id || "")));
+        document.getElementById("placeCount").textContent = `${places.length}곳`;
+
+        const list = document.getElementById("placeList");
+        if (!places.length) {
+          list.innerHTML = `<p class="empty">저장한 장소가 없어요</p>`;
+        } else {
+          list.innerHTML = places.map((l) => {
+            const gurl = googleMapsUrl(l.lat, l.lng, l.title);
+            return `
+              <div class="place-row">
+                <div>
+                  <div class="title">${escapeHtml(l.title || "")}</div>
+                  <div class="meta">${l.date}${l.address ? " · " + escapeHtml(l.address) : ""}${l.memo ? " · " + escapeHtml(l.memo) : ""}</div>
+                </div>
+                <div class="actions">
+                  <a class="link-gmaps" href="${escapeAttr(gurl)}" target="_blank" rel="noopener">구글지도</a>
+                  <button type="button" class="del" data-del-exp="${l.id}" style="color:var(--text-hint);font-size:12px;font-weight:700">삭제</button>
+                </div>
+              </div>`;
+          }).join("");
+        }
+
+        const travelActive = document.getElementById("panel-travel")?.classList.contains("active");
+        if (!travelActive) return;
+        const map = ensurePlaceMap();
+        if (!map || !placeLayer) return;
+        placeLayer.clearLayers();
+        const latlngs = [];
+        places.forEach((l) => {
+          if (l.lat == null || l.lng == null) return;
+          const ll = [Number(l.lat), Number(l.lng)];
+          latlngs.push(ll);
+          const gurl = googleMapsUrl(l.lat, l.lng, l.title);
+          const marker = L.marker(ll);
+          marker.bindPopup(
+            `<strong>${escapeHtml(l.title || "")}</strong><br/>` +
+            `<span style="font-size:12px;color:#666">${escapeHtml(l.address || "")}</span><br/>` +
+            `<a href="${escapeAttr(gurl)}" target="_blank" rel="noopener">구글지도에서 보기</a>`
+          );
+          placeLayer.addLayer(marker);
+        });
+        if (latlngs.length === 1) map.setView(latlngs[0], 14);
+        else if (latlngs.length > 1) map.fitBounds(latlngs, { padding: [28, 28] });
+        else map.setView([37.5665, 126.978], 11);
+      }
+
+      function escapeAttr(str) {
+        return String(str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;");
+      }
+
+      function renderSettings() {
+        document.getElementById("setTargetBooks").value = state.profile.targetBooks;
+        document.getElementById("setTargetStudy").value = state.profile.targetStudyHours;
+        document.getElementById("setKakaoKey").value = state.profile.kakaoRestKey || "";
+        const syncInput = document.getElementById("setSyncId");
+        if (syncInput) syncInput.value = getSyncId();
+      }
+
+      function renderDashboard() {
+        renderTodayHero();
+        renderGauges();
+        renderRoutineList();
+        renderStudyHabitStrip();
+        renderExerciseHabitStrip();
+        renderCalendar();
+      }
+
+      function renderAll() {
+        renderDashboard();
+        renderFinance();
+        renderExperience();
+        renderSettings();
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      /* Actions */
+      function adjustDraft(subject, dir) {
+        if (isCountSubject(subject)) {
+          const next = drafts[subject] + dir * COUNT_STEP;
+          drafts[subject] = Math.max(COUNT_STEP, Math.min(500, next));
+        } else {
+          const next = drafts[subject] + dir * STEP_MIN;
+          drafts[subject] = Math.max(STEP_MIN, Math.min(12 * 60, next));
+        }
+        updateRoutineDraftUI(subject);
+        vibrateSoft();
+      }
+
+      function setDraft(subject, value) {
+        drafts[subject] = value;
+        updateRoutineDraftUI(subject);
+        vibrateSoft();
+      }
+
+      function commitRoutine(subject) {
+        const meta = subjectMeta(subject);
+        if (!meta) return;
+        const draft = drafts[subject];
+
+        if (meta.unit === "count") {
+          if (!draft || draft < COUNT_STEP) {
+            toast("5회 이상 선택해 주세요");
+            return;
+          }
+          const snapped = Math.round(draft / COUNT_STEP) * COUNT_STEP;
+          state.studyLogs.push({
+            id: uid(),
+            date: todayISO(),
+            subject,
+            reps: snapped,
+            unit: "count",
+            hours: 0,
+          });
+          saveState();
+          drafts[subject] = defaultDraftFor(subject);
+          renderDashboard();
+          const item = document.getElementById("routine-" + subject);
+          if (item) {
+            item.classList.remove("flash");
+            void item.offsetWidth;
+            item.classList.add("flash");
+          }
+          vibrateSoft();
+          toast(`${meta.label} ${formatReps(snapped)} 기록했어요`);
+          return;
+        }
+
+        if (!draft || draft < STEP_MIN) {
+          toast("15분 이상 선택해 주세요");
+          return;
+        }
+        const snapped = Math.round(draft / STEP_MIN) * STEP_MIN;
+        const hours = Math.round((snapped / 60) * 1000) / 1000;
+
+        state.studyLogs.push({
+          id: uid(),
+          date: todayISO(),
+          subject,
+          hours,
+          unit: "time",
+        });
+        saveState();
+
+        drafts[subject] = defaultDraftFor(subject);
+        renderDashboard();
+
+        const item = document.getElementById("routine-" + subject);
+        if (item) {
+          item.classList.remove("flash");
+          void item.offsetWidth;
+          item.classList.add("flash");
+        }
+
+        vibrateSoft();
+        toast(`${meta.label} ${formatMinutes(snapped)} 기록했어요`);
+      }
+
+      function saveExperience() {
+        const memo = document.getElementById("expMemo").value.trim();
+        let title = "";
+        let payload = {
+          id: uid(),
+          date: todayISO(),
+          category: expCategory === "movie" ? "movie" : "book",
+          memo,
+        };
+
+        if (expSelected) {
+          title = expSelected.title;
+          payload.title = title;
+          payload.subtitle = expSelected.subtitle || "";
+          payload.imageUrl = expSelected.imageUrl || "";
+          payload.sourceId = expSelected.sourceId || "";
+          if (payload.category === "book") {
+            payload.bookKind = expSelected.bookKind || bookKind || "book";
+          }
+        } else {
+          title = document.getElementById("expTitle").value.trim();
+          if (!title) {
+            toast("검색해서 선택하거나 제목을 입력해 주세요");
+            return;
+          }
+          payload.title = title;
+          payload.imageUrl = "";
+          payload.subtitle = "";
+        }
+
+        state.experienceLogs.push(payload);
+        saveState();
+        document.getElementById("expMemo").value = "";
+        document.getElementById("expTitle").value = "";
+        document.getElementById("expQuery").value = "";
+        clearExpSelection();
+        document.getElementById("expSearchResults").innerHTML = "";
+        document.getElementById("expSearchStatus").textContent = "";
+        renderGauges();
+        renderExperience();
+
+        if (payload.category === "book") {
+          expView = "books";
+          toast("책장에 꽂았어요 · 목표 +1");
+        } else {
+          expView = "movies";
+          toast("콘텐츠 선반에 저장했어요");
+        }
+        syncExpViewTabs();
+        vibrateSoft();
+      }
+
+      let travelSelected = null;
+      let travelResults = [];
+
+      function clearTravelSelection() {
+        travelSelected = null;
+        const chip = document.getElementById("travelSelectedChip");
+        if (chip) chip.classList.remove("show");
+      }
+
+      function setTravelSelection(item) {
+        travelSelected = item;
+        document.getElementById("travelSelectedChip").classList.add("show");
+        document.getElementById("travelSelectedTitle").textContent = item.title;
+        document.getElementById("travelSelectedSub").textContent = item.address || item.subtitle || "";
+      }
+
+      async function runTravelSearch() {
+        const query = document.getElementById("travelQuery").value.trim();
+        const status = document.getElementById("travelSearchStatus");
+        const box = document.getElementById("travelSearchResults");
+        const btn = document.getElementById("btnTravelSearch");
+        if (!query) {
+          toast("장소를 입력해 주세요");
+          return;
+        }
+        btn.disabled = true;
+        status.textContent = "장소 검색 중…";
+        box.innerHTML = "";
+        try {
+          travelResults = await searchPlaces(query);
+          if (!travelResults.length) {
+            status.textContent = "결과가 없어요. 다른 키워드로 시도해 보세요.";
+            return;
+          }
+          status.textContent = `${travelResults.length}건 · 눌러서 선택`;
+          box.innerHTML = travelResults
+            .map(
+              (item, i) => `
+            <button type="button" class="result-card" data-travel-pick="${i}">
+              <div class="place-result">
+                <div class="pin">📍</div>
+                <div>
+                  <strong>${escapeHtml(item.title)}</strong>
+                  <span>${escapeHtml(item.address || item.subtitle || "")}</span>
+                </div>
+              </div>
+            </button>`
+            )
+            .join("");
+        } catch (err) {
+          console.warn(err);
+          status.textContent = "검색에 실패했어요";
+          toast("장소 검색 실패");
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      function saveTravel() {
+        if (!travelSelected) {
+          toast("장소를 검색해 선택해 주세요");
+          return;
+        }
+        const memo = document.getElementById("travelMemo").value.trim();
+        state.experienceLogs.push({
+          id: uid(),
+          date: todayISO(),
+          category: "place",
+          title: travelSelected.title,
+          subtitle: travelSelected.subtitle || "",
+          address: travelSelected.address || "",
+          lat: travelSelected.lat,
+          lng: travelSelected.lng,
+          memo,
+          imageUrl: "",
+          sourceId: travelSelected.sourceId || "",
+        });
+        saveState();
+        document.getElementById("travelMemo").value = "";
+        document.getElementById("travelQuery").value = "";
+        document.getElementById("travelSearchResults").innerHTML = "";
+        document.getElementById("travelSearchStatus").textContent = "";
+        clearTravelSelection();
+        renderPlaces();
+        toast("지도에 장소를 찍었어요");
+        vibrateSoft();
+      }
+
+      function clearExpSelection() {
+        expSelected = null;
+        const chip = document.getElementById("expSelectedChip");
+        if (chip) chip.classList.remove("show");
+        const manual = document.getElementById("expManualTitleRow");
+        if (manual) manual.hidden = false;
+      }
+
+      function setExpSelection(item) {
+        expSelected = item;
+        const chip = document.getElementById("expSelectedChip");
+        chip.classList.add("show");
+        const img = document.getElementById("expSelectedImg");
+        if (item.imageUrl) {
+          img.style.display = "block";
+          img.src = item.imageUrl;
+        } else {
+          img.style.display = "none";
+        }
+        const hint =
+          expCategory === "book"
+            ? item.bookKind === "comic" || bookKind === "comic"
+              ? "만화 선택됨"
+              : "도서 선택됨"
+            : "콘텐츠 선택됨";
+        document.getElementById("expSelectedHint").textContent = hint;
+        document.getElementById("expSelectedTitle").textContent = item.title;
+        document.getElementById("expSelectedSub").textContent = item.subtitle || "";
+        document.getElementById("expManualTitleRow").hidden = true;
+        document.getElementById("expTitle").value = item.title;
+      }
+
+      function syncExpCategoryUI() {
+        const q = document.getElementById("expQuery");
+        const btn = document.getElementById("btnSaveExp");
+        const results = document.getElementById("expSearchResults");
+        const titleLabel = document.getElementById("expTitleLabelText");
+        const titleInput = document.getElementById("expTitle");
+        const memoLabel = document.getElementById("expMemoLabelText");
+        const memoInput = document.getElementById("expMemo");
+        const manualRow = document.getElementById("expManualTitleRow");
+        const kindChips = document.getElementById("bookKindChips");
+        const heroTitle = document.getElementById("expHeroTitle");
+        const heroSub = document.getElementById("expHeroSub");
+
+        results.classList.remove("place-mode");
+        kindChips.classList.toggle("show", expCategory === "book");
+
+        if (expCategory === "book") {
+          heroTitle.textContent = "어떤 책을 다 읽었나요?";
+          heroSub.textContent = "한국 도서·만화 표지를 검색해 책장에 꽂아요";
+          q.placeholder =
+            bookKind === "comic" ? "만화 제목 · 작가 (예: 우시지마)" : "책·만화 제목, 작가";
+          document.getElementById("expSearchHint").textContent =
+            bookKind === "comic"
+              ? "예: 사채꾼 우시지마 · 철자가 애매하면 ‘우시지마’만 쳐보세요"
+              : "예: 클린 코드 · 사채꾼 우시지마 · 짧은 키워드도 OK";
+          titleLabel.textContent = "제목";
+          titleInput.placeholder = "제목 직접 입력";
+          memoLabel.textContent = "한 줄 소감";
+          memoInput.placeholder = "읽은 느낌을 남겨보세요";
+          btn.textContent = "책장에 꽂기";
+          manualRow.hidden = false;
+        } else {
+          heroTitle.textContent = "무엇을 봤나요?";
+          heroSub.textContent = "영화·드라마 포스터를 찾아 선반에 저장해요";
+          q.placeholder = "영화 · 드라마 제목";
+          document.getElementById("expSearchHint").textContent =
+            "예: 기생충 · 더 글로리";
+          titleLabel.textContent = "제목";
+          titleInput.placeholder = "콘텐츠 제목 직접 입력";
+          memoLabel.textContent = "한 줄 소감";
+          memoInput.placeholder = "본 느낌을 남겨보세요";
+          btn.textContent = "선반에 저장";
+          manualRow.hidden = false;
+        }
+
+        clearExpSelection();
+        results.innerHTML = "";
+        document.getElementById("expSearchStatus").textContent = "";
+        manualRow.hidden = false;
+      }
+
+      function syncExpViewTabs() {
+        if (expView === "places") expView = "books";
+        document.querySelectorAll("#expViewTabs button").forEach((b) => {
+          b.classList.toggle("active", b.dataset.view === expView);
+        });
+        document.querySelectorAll(".exp-pane").forEach((p) => {
+          p.classList.toggle("active", p.id === "pane-" + expView);
+        });
+      }
+
+      async function searchBooks(query) {
+        const merged = [];
+        const seen = new Set();
+
+        function addAll(items, kindHint) {
+          (items || []).forEach((item) => {
+            if (!item || !item.title) return;
+            const key = (item.sourceId || item.title + "|" + item.subtitle).toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            merged.push({
+              ...item,
+              bookKind:
+                item.bookKind ||
+                kindHint ||
+                (bookKind === "comic" ? "comic" : "book"),
+            });
+          });
+        }
+
+        // 1) 알라딘 기반 국내 도서/만화 (Vercel API)
+        try {
+          const apiUrl =
+            `/api/books?q=${encodeURIComponent(query)}&kind=${encodeURIComponent(bookKind)}`;
+          const res = await fetch(apiUrl);
+          if (res.ok) {
+            const data = await res.json();
+            addAll(data.results || [], bookKind === "comic" ? "comic" : "book");
+          }
+        } catch (e) {
+          console.warn("aladin api", e);
+        }
+
+        // 결과가 충분하면 바로 반환 (한국 책/만화 우선)
+        if (merged.length >= 6) {
+          merged.sort((a, b) => Number(!!b.imageUrl) - Number(!!a.imageUrl));
+          return merged.slice(0, 18);
+        }
+
+        // 2) 카카오 (설정 키)
+        const kakaoKey = (state.profile.kakaoRestKey || "").trim();
+        if (kakaoKey) {
+          try {
+            const kq =
+              bookKind === "comic" && !/만화/.test(query) ? `${query} 만화` : query;
+            const url = `https://dapi.kakao.com/v3/search/book?query=${encodeURIComponent(kq)}&size=15`;
+            const res = await fetch(url, {
+              headers: { Authorization: `KakaoAK ${kakaoKey}` },
+            });
+            if (res.ok) {
+              const data = await res.json();
+              addAll(
+                (data.documents || []).map((d) => ({
+                  title: (d.title || "").replace(/<[^>]+>/g, "") || "제목 없음",
+                  subtitle: [(d.authors || []).join(", "), d.publisher || "", (d.datetime || "").slice(0, 4)]
+                    .filter(Boolean)
+                    .join(" · "),
+                  imageUrl: (d.thumbnail || "").replace(/^http:/, "https:"),
+                  sourceId: "kakao-" + (d.isbn || d.url || d.title),
+                })),
+                bookKind === "comic" ? "comic" : "book"
+              );
+            }
+          } catch (e) {
+            console.warn("kakao", e);
+          }
+        }
+
+        // 3) Open Library + 번역 보조
+        async function openLibrary(q) {
+          const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=12`;
+          const res = await fetch(url);
+          if (!res.ok) return [];
+          const data = await res.json();
+          return (data.docs || []).map((d) => ({
+            title: d.title || "제목 없음",
+            subtitle: [(d.author_name && d.author_name[0]) || "", d.first_publish_year || ""]
+              .filter(Boolean)
+              .join(" · "),
+            imageUrl: d.cover_i
+              ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg`
+              : "",
+            sourceId: d.key || "",
+          }));
+        }
+
+        try {
+          addAll(await openLibrary(query));
+        } catch (e) {
+          console.warn("ol", e);
+        }
+
+        if (/[가-힣]/.test(query) && merged.length < 4) {
+          try {
+            const tr = await fetch(
+              `https://api.mymemory.translated.net/get?q=${encodeURIComponent(query)}&langpair=ko|en`
+            );
+            if (tr.ok) {
+              const td = await tr.json();
+              const en = (td.responseData && td.responseData.translatedText) || "";
+              if (en && en.toLowerCase() !== query.toLowerCase()) {
+                addAll(await openLibrary(en));
+              }
+            }
+          } catch (e) {
+            console.warn("translate", e);
+          }
+        }
+
+        merged.sort((a, b) => Number(!!b.imageUrl) - Number(!!a.imageUrl));
+        return merged.slice(0, 18);
+      }
+
+      async function searchMovies(query) {
+        // iTunes Search API (CORS OK, no key) — movie + TV/podcast-style media via movie entity
+        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=movie&limit=12&country=KR&lang=ko_KR`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("movie search failed");
+        const data = await res.json();
+        let items = (data.results || []).map((d) => ({
+          title: d.trackName || d.collectionName || "제목 없음",
+          subtitle: [d.artistName || "", (d.releaseDate || "").slice(0, 4)].filter(Boolean).join(" · "),
+          imageUrl: (d.artworkUrl100 || "").replace("100x100bb", "300x300bb"),
+          sourceId: String(d.trackId || d.collectionId || ""),
+        }));
+
+        // Fallback / supplement with TV shows via iTunes tvShow
+        if (items.length < 6) {
+          const tvUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=tvSeason&limit=8&country=KR&lang=ko_KR`;
+          try {
+            const tvRes = await fetch(tvUrl);
+            if (tvRes.ok) {
+              const tvData = await tvRes.json();
+              const tvItems = (tvData.results || []).map((d) => ({
+                title: d.collectionName || d.trackName || "제목 없음",
+                subtitle: [d.artistName || "TV", (d.releaseDate || "").slice(0, 4)].filter(Boolean).join(" · "),
+                imageUrl: (d.artworkUrl100 || "").replace("100x100bb", "300x300bb"),
+                sourceId: "tv-" + String(d.collectionId || d.trackId || ""),
+              }));
+              items = items.concat(tvItems);
+            }
+          } catch (_) {}
+        }
+        return items;
+      }
+
+      async function searchPlaces(query) {
+        try {
+          const url =
+            `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}` +
+            `&limit=8&addressdetails=0&accept-language=ko`;
+          const res = await fetch(url, { headers: { Accept: "application/json" } });
+          if (!res.ok) throw new Error("nominatim failed");
+          const data = await res.json();
+          if (data && data.length) {
+            return data.map((d) => ({
+              title: (d.name || d.display_name || "").split(",")[0] || d.display_name,
+              subtitle: d.display_name || "",
+              address: d.display_name || "",
+              imageUrl: "",
+              lat: Number(d.lat),
+              lng: Number(d.lon),
+              sourceId: String(d.place_id || ""),
+            }));
+          }
+        } catch (_) {}
+
+        // Photon fallback (Komoot)
+        const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8&lang=ko`;
+        const res2 = await fetch(photonUrl);
+        if (!res2.ok) throw new Error("place search failed");
+        const data2 = await res2.json();
+        return (data2.features || []).map((f, i) => {
+          const p = f.properties || {};
+          const [lng, lat] = f.geometry.coordinates;
+          const title = p.name || p.street || p.city || "장소";
+          const address = [p.name, p.street, p.city, p.state, p.country].filter(Boolean).join(", ");
+          return {
+            title,
+            subtitle: address,
+            address,
+            imageUrl: "",
+            lat: Number(lat),
+            lng: Number(lng),
+            sourceId: "ph-" + (p.osm_id || i),
+          };
+        });
+      }
+
+      async function runExpSearch() {
+        const query = document.getElementById("expQuery").value.trim();
+        const status = document.getElementById("expSearchStatus");
+        const box = document.getElementById("expSearchResults");
+        const btn = document.getElementById("btnExpSearch");
+        if (!query) {
+          toast("검색어를 입력해 주세요");
+          return;
+        }
+        btn.disabled = true;
+        status.textContent =
+          expCategory === "book"
+            ? bookKind === "comic"
+              ? "만화 찾는 중… 비슷한 표기도 함께 찾아요"
+              : "국내 도서·만화 찾는 중…"
+            : "검색 중…";
+        box.innerHTML = "";
+        try {
+          if (expCategory === "movie") searchResults = await searchMovies(query);
+          else searchResults = await searchBooks(query);
+
+          if (!searchResults.length) {
+            status.textContent =
+              expCategory === "book"
+                ? "결과가 없어요. 제목 일부만(예: 우시지마) 다시 검색해 보세요."
+                : "결과가 없어요. 다른 키워드로 시도해 보세요.";
+            return;
+          }
+          status.textContent = `${searchResults.length}건 · 눌러서 선택`;
+          renderSearchResults();
+        } catch (err) {
+          console.warn(err);
+          status.textContent = "검색에 실패했어요. 잠시 후 다시 시도해 주세요.";
+          toast("검색 실패 · 네트워크를 확인해 주세요");
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      function renderSearchResults() {
+        const box = document.getElementById("expSearchResults");
+        const emoji = expCategory === "book" ? "📖" : "🎬";
+        box.innerHTML = searchResults.map((item, i) => {
+          const cover = item.imageUrl
+            ? `<img class="cover" src="${escapeAttr(item.imageUrl)}" alt="" loading="lazy" />`
+            : `<div class="cover placeholder">${emoji}</div>`;
+          return `
+            <button type="button" class="result-card${expSelected && expSelected.sourceId === item.sourceId ? " selected" : ""}" data-pick="${i}">
+              ${cover}
+              <div class="info">
+                <strong>${escapeHtml(item.title)}</strong>
+                <span>${escapeHtml(item.subtitle || "")}</span>
+              </div>
+            </button>`;
+        }).join("");
+      }
+
+      function saveGoals() {
+        state.profile.targetBooks = Math.max(1, Number(document.getElementById("setTargetBooks").value) || 50);
+        state.profile.targetStudyHours = Math.max(1, Number(document.getElementById("setTargetStudy").value) || 300);
+        saveState();
+        renderGauges();
+        renderSettings();
+        toast("목표를 저장했어요");
+      }
+
+      function shiftMonth(delta) {
+        const [y, m] = viewMonth.split("-").map(Number);
+        const d = new Date(y, m - 1 + delta, 1);
+        viewMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        renderFinance();
+      }
+
+      function shiftCalMonth(delta) {
+        const [y, m] = calMonth.split("-").map(Number);
+        const d = new Date(y, m - 1 + delta, 1);
+        calMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        renderCalendar();
+      }
+
+      function jumpCalToToday() {
+        calMonth = todayYM();
+        selectedCalDate = todayISO();
+        renderCalendar();
+        openDaySheet(selectedCalDate);
+      }
+
+      function exportToCSV() {
+        const out = [["섹션", "날짜", "필드A", "필드B", "필드C"]];
+        out.push(["공부/운동", "날짜", "과목", "시간(h)/횟수", "단위"]);
+        state.studyLogs.forEach((l) => {
+          const reps = Number(l.reps || 0);
+          const hours = Number(l.hours || 0);
+          out.push([
+            "공부/운동",
+            l.date,
+            SUBJECT_LABEL[l.subject] || l.subject,
+            reps > 0 ? reps : hours,
+            reps > 0 ? "회" : "시간",
+          ]);
+        });
+        out.push(["가계부", "날짜", "수입/지출", "금액(원)", "내용"]);
+        state.financeLogs.forEach((l) => {
+          out.push(["가계부", l.date, l.type === "income" ? "수입" : "지출", l.amount, l.desc]);
+        });
+        out.push(["섹션", "날짜", "카테고리", "제목", "메모/주소"]);
+        state.experienceLogs.forEach((l) => {
+          const section = l.category === "place" ? "여행" : "독서";
+          out.push([
+            section,
+            l.date,
+            CAT_LABEL[l.category] || l.category,
+            l.title,
+            l.memo || l.address || "",
+          ]);
+        });
+
+        const csvBody = out.map((r) => r.map((v) => {
+          const s = String(v ?? "");
+          return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        }).join(",")).join("\r\n");
+
+        const blob = new Blob(["\uFEFF" + csvBody], { type: "text/csv;charset=utf-8;" });
+        const filename = `completion_life_log_${todayISO().replace(/-/g, "")}.csv`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        toast("CSV를 내려받았어요");
+      }
+
+      window.exportToCSV = exportToCSV;
+
+      /* Events */
+      document.querySelectorAll("nav.tabbar button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("nav.tabbar button").forEach((b) => b.classList.toggle("active", b === btn));
+          document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.dataset.panel === btn.dataset.tab));
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          if (btn.dataset.tab === "travel") {
+            setTimeout(() => {
+              renderPlaces();
+              ensurePlaceMap();
+              if (placeMap) placeMap.invalidateSize();
+            }, 220);
+          }
+        });
+      });
+
+      /* 모바일 키보드: 탭바 숨김 + 입력칸 가시 영역 확보 */
+      const appEl = document.querySelector(".app");
+      function setKeyboardOpen(open) {
+        document.body.classList.toggle("kb-open", open);
+        appEl.classList.toggle("kb-open", open);
+      }
+      document.addEventListener("focusin", (e) => {
+        if (e.target.matches("input, textarea")) {
+          setKeyboardOpen(true);
+          setTimeout(() => {
+            try {
+              e.target.scrollIntoView({ block: "center", behavior: "smooth" });
+            } catch (_) {}
+          }, 280);
+        }
+      });
+      document.addEventListener("focusout", (e) => {
+        if (e.target.matches("input, textarea")) {
+          setTimeout(() => {
+            if (!document.activeElement || !document.activeElement.matches("input, textarea")) {
+              setKeyboardOpen(false);
+            }
+          }, 80);
+        }
+      });
+      if (window.visualViewport) {
+        let baseH = window.visualViewport.height;
+        window.visualViewport.addEventListener("resize", () => {
+          const shrink = baseH - window.visualViewport.height;
+          if (shrink > 120) setKeyboardOpen(true);
+          else if (shrink < 40 && !(document.activeElement && document.activeElement.matches("input, textarea"))) {
+            setKeyboardOpen(false);
+          }
+        });
+        window.addEventListener("orientationchange", () => {
+          setTimeout(() => { baseH = window.visualViewport.height; }, 400);
+        });
+      }
+
+      function bindRoutineClicks(root) {
+        if (!root) return;
+        root.addEventListener("click", (e) => {
+          const step = e.target.closest("[data-step]");
+          if (step) {
+            adjustDraft(step.dataset.step, Number(step.dataset.dir));
+            return;
+          }
+          const preset = e.target.closest("[data-preset]");
+          if (preset) {
+            setDraft(preset.dataset.preset, Number(preset.dataset.min));
+            return;
+          }
+          const commit = e.target.closest("[data-commit]");
+          if (commit) {
+            commitRoutine(commit.dataset.commit);
+          }
+        });
+      }
+      bindRoutineClicks(document.getElementById("routineList"));
+      bindRoutineClicks(document.getElementById("exerciseList"));
+
+      document.getElementById("btnSaveExp").addEventListener("click", saveExperience);
+      document.getElementById("btnSaveTravel").addEventListener("click", saveTravel);
+      document.getElementById("btnSaveGoals").addEventListener("click", saveGoals);
+      document.getElementById("btnSaveKakaoKey").addEventListener("click", () => {
+        state.profile.kakaoRestKey = document.getElementById("setKakaoKey").value.trim();
+        saveState();
+        toast(state.profile.kakaoRestKey ? "카카오 키를 저장했어요" : "키를 비웠어요");
+      });
+      document.getElementById("btnExpSearch").addEventListener("click", runExpSearch);
+      document.getElementById("expQuery").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          runExpSearch();
+        }
+      });
+      document.getElementById("btnTravelSearch").addEventListener("click", runTravelSearch);
+      document.getElementById("travelQuery").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          runTravelSearch();
+        }
+      });
+      document.getElementById("btnClearSelected").addEventListener("click", () => {
+        clearExpSelection();
+        document.querySelectorAll("#expSearchResults .result-card").forEach((c) => c.classList.remove("selected"));
+      });
+      document.getElementById("btnClearTravelSelected").addEventListener("click", () => {
+        clearTravelSelection();
+        document.querySelectorAll("#travelSearchResults .result-card").forEach((c) => c.classList.remove("selected"));
+      });
+      document.getElementById("expSearchResults").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-pick]");
+        if (!btn) return;
+        const item = searchResults[Number(btn.dataset.pick)];
+        if (!item) return;
+        setExpSelection(item);
+        document.querySelectorAll("#expSearchResults .result-card").forEach((c) => c.classList.remove("selected"));
+        btn.classList.add("selected");
+        vibrateSoft();
+      });
+      document.getElementById("travelSearchResults").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-travel-pick]");
+        if (!btn) return;
+        const item = travelResults[Number(btn.dataset.travelPick)];
+        if (!item) return;
+        setTravelSelection(item);
+        document.querySelectorAll("#travelSearchResults .result-card").forEach((c) => c.classList.remove("selected"));
+        btn.classList.add("selected");
+        vibrateSoft();
+      });
+      document.getElementById("expViewTabs").addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-view]");
+        if (!btn) return;
+        expView = btn.dataset.view;
+        syncExpViewTabs();
+      });
+      document.getElementById("btnExport").addEventListener("click", exportToCSV);
+      document.getElementById("btnExportSettings").addEventListener("click", exportToCSV);
+      document.getElementById("btnPrevMonth").addEventListener("click", () => shiftMonth(-1));
+      document.getElementById("btnNextMonth").addEventListener("click", () => shiftMonth(1));
+      document.getElementById("btnPrevCal").addEventListener("click", () => shiftCalMonth(-1));
+      document.getElementById("btnNextCal").addEventListener("click", () => shiftCalMonth(1));
+      document.getElementById("btnTodayCal").addEventListener("click", jumpCalToToday);
+      document.getElementById("calGrid").addEventListener("click", (e) => {
+        const cell = e.target.closest("[data-cal-date]");
+        if (!cell) return;
+        openDaySheet(cell.dataset.calDate);
+      });
+      document.getElementById("btnCloseDaySheet").addEventListener("click", closeDaySheet);
+      document.getElementById("daySheetBackdrop").addEventListener("click", closeDaySheet);
+      document.getElementById("btnCloseLoanSheet").addEventListener("click", closeLoanSheet);
+      document.getElementById("loanSheetBackdrop").addEventListener("click", closeLoanSheet);
+
+      document.getElementById("ledgerFilters").addEventListener("click", (e) => {
+        const loanBtn = e.target.closest("[data-ledger-action='loan']");
+        if (loanBtn) {
+          openLoanSheet();
+          return;
+        }
+        const btn = e.target.closest("button[data-ledger-filter]");
+        if (!btn) return;
+        ledgerFilter = btn.dataset.ledgerFilter;
+        document.querySelectorAll("#ledgerFilters button[data-ledger-filter]").forEach((b) =>
+          b.classList.toggle("active", b === btn)
+        );
+        renderFinance();
+      });
+      document.getElementById("ledgerCatBars").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-cat-filter]");
+        if (!btn) return;
+        e.preventDefault();
+        let cat = btn.getAttribute("data-cat-filter") || "";
+        try {
+          cat = decodeURIComponent(cat);
+        } catch (_) {}
+        if (!cat) return;
+        if (ledgerCatFilter === cat) {
+          ledgerCatFilter = null;
+        } else {
+          ledgerCatFilter = cat;
+          ledgerFilter = "지출";
+          document.querySelectorAll("#ledgerFilters button[data-ledger-filter]").forEach((b) =>
+            b.classList.toggle("active", b.dataset.ledgerFilter === "지출")
+          );
+        }
+        renderFinance();
+        const target = document.getElementById("ledgerTimeline") || document.getElementById("ledgerStatus");
+        if (target) {
+          setTimeout(() => {
+            try {
+              target.scrollIntoView({ behavior: "smooth", block: "start" });
+            } catch (_) {}
+          }, 50);
+        }
+      });
+      document.getElementById("btnClearCatFilter").addEventListener("click", () => {
+        ledgerCatFilter = null;
+        renderFinance();
+      });
+      document.getElementById("ledgerTimeline").addEventListener("change", (e) => {
+        const sel = e.target.closest("select[data-ledger-id]");
+        if (!sel) return;
+        setLedgerCategory(sel.getAttribute("data-ledger-id"), sel.value);
+      });
+
+      document.getElementById("expCategoryPills").addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-cat]");
+        if (!btn) return;
+        expCategory = btn.dataset.cat;
+        document.querySelectorAll("#expCategoryPills button").forEach((b) => b.classList.toggle("active", b === btn));
+        syncExpCategoryUI();
+      });
+
+      document.getElementById("bookKindChips").addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-kind]");
+        if (!btn) return;
+        bookKind = btn.dataset.kind;
+        document.querySelectorAll("#bookKindChips button").forEach((b) =>
+          b.classList.toggle("active", b === btn)
+        );
+        syncExpCategoryUI();
+        const q = document.getElementById("expQuery").value.trim();
+        if (q) runExpSearch();
+      });
+
+      function deleteExperienceLog(id) {
+        state.experienceLogs = state.experienceLogs.filter((l) => l.id !== id);
+        saveState();
+        renderGauges();
+        renderExperience();
+        toast("삭제했어요");
+      }
+      document.getElementById("panel-reading").addEventListener("click", (e) => {
+        const id = e.target.getAttribute("data-del-exp");
+        if (id) deleteExperienceLog(id);
+      });
+      document.getElementById("panel-travel").addEventListener("click", (e) => {
+        const id = e.target.getAttribute("data-del-exp");
+        if (id) deleteExperienceLog(id);
+      });
+
+      document.getElementById("btnCopySyncId").addEventListener("click", async () => {
+        const id = getSyncId();
+        try {
+          await navigator.clipboard.writeText(id);
+          toast("동기화 ID를 복사했어요");
+        } catch (_) {
+          document.getElementById("setSyncId").select();
+          toast("ID를 길게 눌러 복사해 주세요");
+        }
+      });
+      document.getElementById("btnApplySyncId").addEventListener("click", async () => {
+        const next = document.getElementById("setSyncId").value;
+        if (!setSyncId(next)) return;
+        toast("동기화 ID를 적용했어요");
+        const changed = await pullFromCloud();
+        renderAll();
+        if (!changed) await pushToCloud();
+      });
+      document.getElementById("btnForceSync").addEventListener("click", async () => {
+        await pushToCloud();
+        toast("클라우드에 저장했어요");
+      });
+
+      async function boot() {
+        initFirebase();
+        renderSettings();
+        syncExpCategoryUI();
+        syncExpViewTabs();
+        if (cloudReady) {
+          await pullFromCloud();
+        }
+        renderAll();
+        loadLedgerData();
+        loadLoansData();
+      }
+      boot();
+    })();
+  </script>
+</body>
+</html>
