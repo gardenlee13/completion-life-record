@@ -5,9 +5,12 @@
 ## 배포 URL
 
 - **Production:** https://completion-life-record.vercel.app
+- **GitHub:** https://github.com/gardenlee13/completion-life-record
+
+`main` 브랜치에 push하면 Vercel이 자동으로 프로덕션 배포합니다.
 
 ```bash
-# 재배포
+# 수동 재배포 (선택)
 npx --yes vercel --prod --yes
 ```
 
