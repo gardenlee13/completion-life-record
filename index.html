@@ -173,6 +173,7 @@
       padding: 16px 14px;
       margin-bottom: 10px;
       box-shadow: var(--shadow);
+      overflow: hidden;
     }
     .card-head {
       display: flex;
@@ -526,34 +527,45 @@
     .dot.movie { background: var(--movie); }
     .cal-weekdays {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 4px;
       margin-bottom: 6px;
       text-align: center;
       font-size: 11px;
       font-weight: 600;
       color: var(--text-hint);
+      width: 100%;
+    }
+    .cal-weekdays > span {
+      min-width: 0;
+      overflow: hidden;
     }
     .cal-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 4px;
+      width: 100%;
     }
     .cal-cell {
       aspect-ratio: 1;
-      min-height: 42px;
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+      max-width: 100%;
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.03);
-      padding: 4px 1px 3px;
+      padding: 3px 1px 2px;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: flex-start;
       gap: 2px;
       cursor: pointer;
       transition: background 0.15s, transform 0.12s var(--ease);
       border: none;
       color: inherit;
-      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
     }
     .cal-cell:not(.empty):active { transform: scale(0.96); }
     .cal-cell.empty { background: transparent; cursor: default; pointer-events: none; }
@@ -577,6 +589,8 @@
       grid-template-columns: 1fr 1fr;
       gap: 2px;
       margin-top: auto;
+      max-width: 100%;
+      justify-items: center;
     }
     .cal-cell .marks.five {
       grid-template-columns: repeat(3, 1fr);
@@ -587,6 +601,7 @@
       border-radius: 50%;
       display: block;
       background: rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
     }
     .cal-cell .marks i.on.en { background: var(--en); }
     .cal-cell .marks i.on.cn { background: var(--cn); }
@@ -1092,7 +1107,10 @@
       .habit-pill .mins { font-size: 9px; }
       .step-value strong { font-size: 20px; }
       .preset { font-size: 12px; min-height: 42px; }
-      .cal-cell { min-height: 38px; }
+      .cal-cell .day-num { font-size: 10px; }
+      .cal-cell .marks i { width: 4px; height: 4px; }
+      .cal-weekdays { font-size: 10px; gap: 2px; }
+      .cal-grid { gap: 2px; }
       .search-results { grid-template-columns: repeat(2, 1fr); max-height: min(48vh, 340px); }
       .shelf-grid { grid-template-columns: repeat(2, 1fr); }
       .kind-chips button { min-height: 34px; font-size: 12px; padding: 0 12px; }
